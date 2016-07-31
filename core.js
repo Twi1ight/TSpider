@@ -137,7 +137,7 @@ exports.FireintheHole = function () {
             var querystring = param(formdata);
             if (querystring) {
                 var action = form.action ? form.action : form.baseURI;
-                var request = form.method + '|||' + rmFragment(action) + '|||' + querystring + '|||' + rmFragment(form.baseURI);
+                var request = form.method.toUpperCase() + '|||' + rmFragment(action) + '|||' + querystring + '|||' + rmFragment(form.baseURI);
                 if (urls.indexOf(request) < 0) {
                     urls.push(request);
                 }

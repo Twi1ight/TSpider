@@ -76,6 +76,9 @@ casper.on('remote.message', function (msg) {
 });
 
 casper.on('exit', function () {
+    if (result_file) {
+        this.echo('save urls to ' + result_file, 'INFO');
+    }
     core.saveFile(static_urls, requested_urls, result_file)
 });
 
