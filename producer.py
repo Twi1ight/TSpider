@@ -5,29 +5,36 @@
 producer
 """
 import json
-import urlparse
-
-import re
 import redis
 from log import logger
 from settings import Redis
 from url_utils import URL
 
-r = redis.StrictRedis(host=Redis.host, port=Redis.port,
-                      db=0, password=Redis.password)
-
 
 class Producer(object):
-    def __init__(self, redis_db=0, task_queue='spider:task', result_queue='spider:result'):
+    """
+    Producer Class
+    make targets for consumer
+    store results to mongodb
+    """
+
+    def __init__(self, redis_db=0, task_queue='spider:task', result_queue='spider:result',
+                 domain_queue='spider:whitedomain', tld=True):
         """
+        :param redis_db:
         :param task_queue:
         :param result_queue:
+        :param domain_queue:
+        :param tld: scan same top-level-domain subdomains. Scan only subdomain self when tld=False
         :return:
         """
+
         self.redis = redis.StrictRedis(host=Redis.host, port=Redis.port,
                                        db=redis_db, password=Redis.password)
         self.task_queue = task_queue
         self.result_queue = result_queue
+        self.domain_queue = domain_queue
+        self.tld = tld
         try:
             self.redis.ping()
         except:
@@ -56,29 +63,90 @@ class Producer(object):
         # todo store to mongodb
         #
         url = URL(urlstring)
-        pattern = url.get_pattern()
-        hashset = '{}://{}'.format(url.scheme, url.netloc)
-        if self.redis.hexists(hashset, pattern):
-            logger.info('%s already scanned, skip' % url.urlstring)
+        # check scanned
+        if self.is_scanned(url):
+            logger.debug('%s already scanned, skip' % url.urlstring)
         else:
             # filter js img etc.
             if url.is_block_ext():
-                logger.info('block ext found: %s' % url.urlstring)
+                logger.debug('block ext found: %s' % url.urlstring)
                 return
-            if url.hostname != 'demo.aisec.cn':
-                logger.error('not demo.aisec.cn')
+            if not self.is_whitedomain(url):
+                logger.debug('%s not white domain' % url.root_domain)
                 return
             if data.get('method', '') == 'GET':
-                self.redis.lpush(self.task_queue, url.urlstring)
+                self.create_url_task(url)
             else:
                 # todo post req
+                logger.error(data)
                 pass
 
-    def create_task(self, filename):
-        # todo  create task from file
-        pass
+    def set_scanned(self, url):
+        """
+        :param url: URL class instance
+        :return:
+        """
+        self.redis.hsetnx(url.hashtable, url.pattern, '*')
+
+    def is_scanned(self, url):
+        """
+        :param url: URL class instance
+        :return:
+        """
+        return self.redis.hexists(url.hashtable, url.pattern)
+
+    def is_whitedomain(self, url):
+        """
+        :param url: URL class instance
+        :return:
+        """
+        if self.tld:
+            return self.redis.hexists(self.domain_queue, url.root_domain)
+        else:
+            return self.redis.hexists(self.domain_queue, url.hostname)
+
+    def set_whitedomain(self, url):
+        """
+        :param url: URL class instance
+        :return:
+        """
+        if self.tld:
+            self.redis.hsetnx(self.domain_queue, url.root_domain, '*')
+        else:
+            self.redis.hsetnx(self.domain_queue, url.hostname, '*')
+
+    def create_url_task(self, url):
+        """
+        :param url: URL class instance
+        :return:
+        """
+        self.redis.lpush(self.task_queue, url.urlstring)
+        # set scanned hash table
+        self.set_scanned(url)
+
+    def create_file_task(self, filename):
+        """
+        create task from file
+        :param filename:
+        :return:
+        """
+        with open(filename) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                url = URL(line)
+                if not url.is_url:
+                    continue
+                self.set_whitedomain(url)
+                self.create_url_task(url)
 
 
 if __name__ == '__main__':
-    p = Producer()
+    # tld=False, only scan links inside demo.aisec.cn
+    # no scan www.aisec.cn even got links from demo.aisc.cn
+    p = Producer(tld=False)
+    url = URL('http://demo.aisec.cn/demo/aisec/')
+    p.set_whitedomain(url)
+    p.create_url_task(url)
     p.produce()

@@ -13,6 +13,7 @@ import traceback
 import urlparse
 import sys
 from log import logger
+import uuid
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -62,9 +63,10 @@ class SpiderPage(object):
             logger.info('incorrect url format found!')
             return []
 
-        fptr, spiderfile = tempfile.mkstemp()
+        # fptr, spiderfile = tempfile.mkstemp()
+        spiderfile = uuid.uuid4().hex
         command = 'casperjs --ignore-ssl-errors=true --ssl-protocol=any ' \
-                  'casper_crawler.js {url} {file}'.format(url=self._url, file=spiderfile)
+                  'casper_crawler.js "{url}" "{file}"'.format(url=self._url, file=spiderfile)
         try:
             returncode = subprocess.check_call(command, shell=True)
             logger.info('casperjs succeed, return code %d' % returncode)
@@ -74,7 +76,8 @@ class SpiderPage(object):
             logger.exception('subprocess failed!')
 
         urls = []
-        with os.fdopen(fptr) as f:
+        # with os.fdopen(fptr) as f:
+        with open(spiderfile) as f:
             for line in f:
                 line = line.strip()
                 try:

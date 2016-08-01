@@ -11,6 +11,7 @@ url_utils
 """
 import re
 import urlparse
+from publicsuffix import PublicSuffixList
 
 
 class URL(object):
@@ -23,13 +24,39 @@ class URL(object):
                 'tiff', 'tpl', 'uff', 'wav', 'wma', 'wmv', 'doc', 'docx', 'db', 'jpg', 'png',
                 'bmp', 'svg', 'gif', 'jpeg', 'css', 'js', 'cur', 'ico', 'zip', 'txt', 'apk',
                 'dmg']
+    PSL = PublicSuffixList()
 
     def __init__(self, url):
-        self.urlstring = url
-        self._p = urlparse.urlsplit(url)
-        if not self._p.scheme and not self._p.netloc:
-            self.is_url = False
         self.is_url = True
+        urlstring = self.normalize_url(url)
+        if not urlstring:
+            self.is_url = False
+        self.urlstring = urlstring
+        self._p = urlparse.urlsplit(url)
+
+    @staticmethod
+    def normalize_url(url):
+        """
+        :param url:
+        :return:
+        """
+        # only hostname
+        if not '/' in url:
+            return 'http://{}'.format(url)
+        p = urlparse.urlsplit(url)
+        # www.test.com/index.php
+        # exclude /xxxxx/index.php
+        if not p.netloc:
+            if url.startswith('/'):
+                # /xxxxx/index.php
+                return ''
+            else:
+                # www.test.com/index.php
+                return 'http://{}'.format(url)
+        # //www.test.com/index.php
+        if not p.scheme:
+            url = urlparse.urlunsplit(('http', p.netloc, p.path, p.query, p.fragment))
+        return url
 
     @property
     def scheme(self):
@@ -42,6 +69,10 @@ class URL(object):
     @property
     def hostname(self):
         return self._p.hostname
+
+    @property
+    def root_domain(self):
+        return self.PSL.get_public_suffix(self.hostname)
 
     @property
     def path(self):
@@ -76,15 +107,20 @@ class URL(object):
     def fragment(self):
         return self._p.fragment
 
-    def get_pattern(self):
+    @property
+    def pattern(self):
         """
         :param urlstring:
         :return:
         """
         path_pattern = re.sub('\d+', 'd+', self._p.path)
         query_params = '<>'.join(sorted(self.querydict.keys()))
-        pattern = '{}?{}'.format(path_pattern, query_params)
+        pattern = '{}?{}'.format(path_pattern, query_params) if query_params else path_pattern
         return pattern
+
+    @property
+    def hashtable(self):
+        return '{}://{}'.format(self.scheme, self.netloc)
 
     def is_block_ext(self):
         return True if self.extension in URL.BLOCKEXT else False
@@ -92,4 +128,4 @@ class URL(object):
 
 if __name__ == '__main__':
     print URL(
-            'http://www.baidu.com/fuck/kjskdjf.php?args=kjsdfu&k=kuc&iiii=ksnc#skdf').get_pattern()
+        'http://www.baidu.com/fuck/kjskdjf.php?args=kjsdfu&k=kuc&iiii=ksnc#skdf').pattern()
