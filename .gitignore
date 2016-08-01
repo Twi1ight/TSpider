@@ -116,3 +116,4 @@ crashlytics.properties
 crashlytics-build.properties
 fabric.properties
 *.txt
+*.rdb

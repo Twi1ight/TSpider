@@ -22,15 +22,15 @@ class SpiderPage(object):
     Spider Page
     """
 
-    def __init__(self, url, outfile):
+    def __init__(self, url, outfile=None):
         """
         :param url:
         :param outfile:
         :return:
         """
-        self.url = self.normalize_url(url)
-        self.outfile = outfile
-        self.spider()
+        self._url = self.normalize_url(url)
+        self._outfile = outfile
+        self._results = []
 
     @staticmethod
     def normalize_url(url):
@@ -45,27 +45,13 @@ class SpiderPage(object):
             url = urlparse.urlunsplit(('http', p.netloc, p.path, p.query, p.fragment))
         return url
 
-    def querytask(self):
-        """
-        get task from AMQ
-        :return:
-        """
-        pass
-
-    def sendresult(self, data):
-        """
-        send result to redis
-        :return:
-        """
-        pass
-
     def spider(self):
-        if not self.url:
-            return
+        if not self._url:
+            return []
 
         fptr, spiderfile = tempfile.mkstemp()
         command = 'casperjs --ignore-ssl-errors=true --ssl-protocol=any ' \
-                  'casper_crawler.js {url} {file}'.format(url=self.url, file=spiderfile)
+                  'casper_crawler.js {url} {file}'.format(url=self._url, file=spiderfile)
         try:
             process = subprocess.check_call(command, shell=True)
             print process
@@ -75,7 +61,6 @@ class SpiderPage(object):
             traceback.print_exc()
 
         urls = []
-        of = open(self.outfile, 'a')
         with os.fdopen(fptr) as f:
             for line in f:
                 line = line.strip()
@@ -107,15 +92,20 @@ class SpiderPage(object):
                     'postdata': postdata,
                     'headers': headers
                 }
-                print json.dumps(data)
-                of.write(json.dumps(data) + '\n')
-
+                # print json.dumps(data)
+                self._results.append(json.dumps(data))
         os.unlink(spiderfile)
-        of.close()
+        if self._outfile:
+            with open(self._outfile, 'w') as f:
+                for url in self._results:
+                    f.write(url + '\n')
+        return self._results
 
 
 if __name__ == '__main__':
     # url, outfile = sys.argv[1], sys.argv[2]
     # url = sys.argv[1]
-    SpiderPage('http://demo.aisec.cn/demo/aisec/', 'aisec.txt')
+    urls = SpiderPage('http://demo.aisec.cn/demo/aisec/', 'aisec.txt').spider()
     # spider('http://192.168.88.128/page.html')
+    for u in urls:
+        print u
