@@ -12,6 +12,7 @@ import subprocess
 import traceback
 import urlparse
 import sys
+from log import logger
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -38,27 +39,39 @@ class SpiderPage(object):
         :param url:
         :return:
         """
+        # only hostname
+        if not '/' in url:
+            return 'http://{}'.format(url)
         p = urlparse.urlsplit(url)
+        # www.test.com/index.php
+        # exclude /xxxxx/index.php
         if not p.netloc:
-            return ''
+            if url.startswith('/'):
+                # /xxxxx/index.php
+                return ''
+            else:
+                # www.test.com/index.php
+                return 'http://{}'.format(url)
+        # //www.test.com/index.php
         if not p.scheme:
             url = urlparse.urlunsplit(('http', p.netloc, p.path, p.query, p.fragment))
         return url
 
     def spider(self):
         if not self._url:
+            logger.info('incorrect url format found!')
             return []
 
         fptr, spiderfile = tempfile.mkstemp()
         command = 'casperjs --ignore-ssl-errors=true --ssl-protocol=any ' \
                   'casper_crawler.js {url} {file}'.format(url=self._url, file=spiderfile)
         try:
-            process = subprocess.check_call(command, shell=True)
-            print process
+            returncode = subprocess.check_call(command, shell=True)
+            logger.info('casperjs succeed, return code %d' % returncode)
         except subprocess.CalledProcessError as e:
-            print 'casperjs failed, return code: %d' % e.returncode
+            logger.error('casperjs failed, return code: %d' % e.returncode)
         except:
-            traceback.print_exc()
+            logger.exception('subprocess failed!')
 
         urls = []
         with os.fdopen(fptr) as f:
