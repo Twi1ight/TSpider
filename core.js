@@ -6,6 +6,7 @@ var utils = require('utils');
 var fs = require('fs');
 
 exports.evilResource = function (url) {
+    "use strict";
     var parser = document.createElement('a');
     parser.href = url;
     var filename = parser.pathname.replace(/^.*[\\\/]/, '');
@@ -48,6 +49,7 @@ exports.saveFile = function (static_urls, requested_urls, filename) {
 };
 
 exports.FireintheHole = function () {
+    "use strict";
     var urls = [];
     //var retvar = [];
 
@@ -116,7 +118,7 @@ exports.FireintheHole = function () {
     }
 
     function getForms() {
-        buttons = fillInputs();
+        var buttons = fillInputs();
         var f = document.forms;
         for (var i = 0; i < f.length; i++) {
             console.log('form ' + i + ' total:' + f.length);
@@ -160,7 +162,7 @@ exports.FireintheHole = function () {
         for (var i = 0; i < len; i++) {
             //js_code
             if (allElements[i].href) {
-                jscode = allElements[i].href.match("javascript:(.*)");
+                var jscode = allElements[i].href.match("javascript:(.*)");
                 if (jscode) {
                     if (events.indexOf(jscode[0]) < 0) {
                         events.push(jscode[0]);

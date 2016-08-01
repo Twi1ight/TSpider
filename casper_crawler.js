@@ -4,6 +4,7 @@
  *
  *  casperjs --ignore-ssl-errors=true --ssl-protocol=any casper_crawler.js http://foo.bar outfile
  */
+'use strict';
 var core = require('./core');
 var utils = require('utils');
 var result_file, requested_count = 0, static_urls = [], requested_urls = [];

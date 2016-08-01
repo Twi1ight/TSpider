@@ -94,7 +94,7 @@ class SpiderPage(object):
                         headers[header['name']] = header['value']
                     headers.pop('Content-Length', '')
                     headers.pop('User-Agent', '')
-                    # headers.pop('Accept', '')
+                    headers.pop('Accept', '')
                 # check urls fingerprint
                 fp = '%s|%s' % (method, url)
                 if fp in urls:
