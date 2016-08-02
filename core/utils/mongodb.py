@@ -22,6 +22,7 @@ class MongoUtils(object):
             logger.exception('connect mongodb failed!')
             self._client = None
 
+    @property
     def connected(self):
         return True if self._client else False
 
