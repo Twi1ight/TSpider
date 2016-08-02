@@ -26,7 +26,7 @@ class Producer(object):
         :param task_queue:
         :param result_queue:
         :param domain_queue:
-        :param tld: scan same top-level-domain subdomains. Scan only subdomain self when tld=False
+        :param tld: scan same top-level-domain subdomains. Scan only subdomain itself when tld=False
         :return:
         """
 
@@ -77,7 +77,7 @@ class Producer(object):
             logger.debug('%s already scanned, skip' % url.urlstring)
         else:
             if not target:
-                logger.debug('%s is not target' % url.domain if self.tld else url.hostname)
+                logger.debug('%s is not target' % (url.domain if self.tld else url.hostname))
                 return
             # filter js img etc.
             if url.is_block_ext():
