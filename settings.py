@@ -16,6 +16,8 @@ LOG_LEVEL = logging.DEBUG
 
 PSL_FILE_PATH = os.path.join(MODULE_PATH, 'core/utils/public_suffix_list.dat')
 
+MAX_URL_REQUEST_PER_SITE = 100
+
 
 class RedisConf(object):
     host = '127.0.0.1'

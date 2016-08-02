@@ -5,8 +5,10 @@
 producer
 """
 import json
+from Tix import MAX
+
 import redis
-from settings import RedisConf
+from settings import RedisConf, MAX_URL_REQUEST_PER_SITE
 from core.utils.mongodb import MongoUtils
 from core.utils.url import URL
 from core.utils.log import logger
@@ -20,12 +22,13 @@ class Producer(object):
     """
 
     def __init__(self, redis_db=0, task_queue='spider:task', result_queue='spider:result',
-                 domain_queue='spider:targetdomain', tld=True):
+                 domain_queue='spider:targetdomain', status_queue='spider:status', tld=True):
         """
         :param redis_db:
         :param task_queue:
         :param result_queue:
         :param domain_queue:
+        :param status_queue:
         :param tld: scan same top-level-domain subdomains. Scan only subdomain itself when tld=False
         :return:
         """
@@ -34,6 +37,7 @@ class Producer(object):
         self.task_queue = task_queue
         self.result_queue = result_queue
         self.domain_queue = domain_queue
+        self.status_queue = status_queue
         self.tld = tld
         try:
             self.redis.ping()
@@ -73,9 +77,13 @@ class Producer(object):
         target = self.is_target(url)
         self.mongodb.save(data, is_target=target)
 
+        if self.get_req_count(url.hostname) > MAX_URL_REQUEST_PER_SITE:
+            logger.info('%s max req count reached!' % url.hostname)
+            return
         # check scanned
         if self.is_scanned(url):
             logger.debug('%s already scanned, skip' % url.urlstring)
+            return
         else:
             if not target:
                 logger.debug('%s is not target' % (url.domain if self.tld else url.hostname))
@@ -90,6 +98,12 @@ class Producer(object):
                 # todo post req
                 logger.debug(data)
                 pass
+
+    def incr_req_count(self, hostname):
+        self.redis.hincrby(self.status_queue, hostname, 1)
+
+    def get_req_count(self, hostname):
+        return self.redis.hget(self.status_queue, hostname)
 
     def set_scanned(self, url):
         """
@@ -133,6 +147,7 @@ class Producer(object):
         self.redis.lpush(self.task_queue, url.urlstring)
         # set scanned hash table
         self.set_scanned(url)
+        self.incr_req_count(url.hostname)
 
     def create_file_task(self, fileobj):
         """
