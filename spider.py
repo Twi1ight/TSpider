@@ -86,6 +86,7 @@ class SpiderPage(object):
                     method, url, postdata, referer = line.split('|||')
                     postdata = '' if postdata == 'null' else postdata
                     headers = {'Referer': referer}
+                    source = 'static'
                 else:
                     method = request['method']
                     url = request['url']
@@ -96,6 +97,7 @@ class SpiderPage(object):
                     headers.pop('Content-Length', '')
                     headers.pop('User-Agent', '')
                     headers.pop('Accept', '')
+                    source = 'request'
                 # check urls fingerprint
                 fp = '%s|%s' % (method, url)
                 if fp in urls:
@@ -106,7 +108,8 @@ class SpiderPage(object):
                     'method': method,
                     'url': url,
                     'postdata': postdata,
-                    'headers': headers
+                    'headers': headers,
+                    'source': source
                 }
                 # print json.dumps(data)
                 self._results.append(json.dumps(data))

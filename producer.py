@@ -7,7 +7,8 @@ producer
 import json
 import redis
 from log import logger
-from settings import Redis
+from mongodb import MongoUtils
+from settings import RedisConf
 from url_utils import URL
 
 
@@ -29,8 +30,9 @@ class Producer(object):
         :return:
         """
 
-        self.redis = redis.StrictRedis(host=Redis.host, port=Redis.port,
-                                       db=redis_db, password=Redis.password)
+        self.redis = redis.StrictRedis(host=RedisConf.host, port=RedisConf.port,
+                                       db=redis_db, password=RedisConf.password)
+        self.mongodb = MongoUtils()
         self.task_queue = task_queue
         self.result_queue = result_queue
         self.domain_queue = domain_queue
@@ -42,8 +44,8 @@ class Producer(object):
             self.redis = None
 
     def produce(self):
-        if not self.redis:
-            logger.error('no redis connection found! exit.')
+        if not self.redis or not self.mongodb:
+            logger.error('no redis/mongodb connection found! exit.')
             return
         while True:
             _, req = self.redis.brpop(self.result_queue, 0)
@@ -60,9 +62,15 @@ class Producer(object):
         if not urlstring:
             logger.error('empty url found!')
             return
-        # todo store to mongodb
-        #
         url = URL(urlstring)
+
+        # store to mongodb
+        data.update({'pattern': url.store_pattern,
+                     'hostname': url.hostname,
+                     'domain': url.domain
+                     })
+        self.mongodb.save(data)
+
         # check scanned
         if self.is_scanned(url):
             logger.debug('%s already scanned, skip' % url.urlstring)
@@ -72,7 +80,7 @@ class Producer(object):
                 logger.debug('block ext found: %s' % url.urlstring)
                 return
             if not self.is_whitedomain(url):
-                logger.debug('%s not white domain' % url.root_domain)
+                logger.debug('%s not white domain' % url.domain)
                 return
             if data.get('method', '') == 'GET':
                 self.create_url_task(url)
@@ -86,14 +94,14 @@ class Producer(object):
         :param url: URL class instance
         :return:
         """
-        self.redis.hsetnx(url.hashtable, url.pattern, '*')
+        self.redis.hsetnx(url.hashtable, url.spider_pattern, '*')
 
     def is_scanned(self, url):
         """
         :param url: URL class instance
         :return:
         """
-        return self.redis.hexists(url.hashtable, url.pattern)
+        return self.redis.hexists(url.hashtable, url.spider_pattern)
 
     def is_whitedomain(self, url):
         """
@@ -101,7 +109,7 @@ class Producer(object):
         :return:
         """
         if self.tld:
-            return self.redis.hexists(self.domain_queue, url.root_domain)
+            return self.redis.hexists(self.domain_queue, url.domain)
         else:
             return self.redis.hexists(self.domain_queue, url.hostname)
 
@@ -111,7 +119,7 @@ class Producer(object):
         :return:
         """
         if self.tld:
-            self.redis.hsetnx(self.domain_queue, url.root_domain, '*')
+            self.redis.hsetnx(self.domain_queue, url.domain, '*')
         else:
             self.redis.hsetnx(self.domain_queue, url.hostname, '*')
 

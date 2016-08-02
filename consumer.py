@@ -7,7 +7,7 @@ consumer
 import time
 import redis
 from log import logger
-from settings import Redis
+from settings import RedisConf
 from spider import SpiderPage
 
 
@@ -23,8 +23,8 @@ class Consumer(object):
         :param result_queue:
         :return:
         """
-        self.redis = redis.StrictRedis(host=Redis.host, port=Redis.port,
-                                       db=redis_db, password=Redis.password)
+        self.redis = redis.StrictRedis(host=RedisConf.host, port=RedisConf.port,
+                                       db=redis_db, password=RedisConf.password)
         self.task_queue = task_queue
         self.result_queue = result_queue
         try:

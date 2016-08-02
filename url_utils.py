@@ -1,14 +1,11 @@
 #!/usr/bin/python
 # -*- coding:utf-8 -*-
 #
-# -----------------------------------------------------------
-# Author:      chensongnian@baidu.com
-# Created:     16/8/1 下午5:57
-# Copyright:   (c) 2016 Baidu.com, Inc. All Rights Reserved
-# -----------------------------------------------------------
 """
 url_utils
 """
+import codecs
+
 import re
 import urlparse
 from publicsuffix import PublicSuffixList
@@ -24,7 +21,9 @@ class URL(object):
                 'tiff', 'tpl', 'uff', 'wav', 'wma', 'wmv', 'doc', 'docx', 'db', 'jpg', 'png',
                 'bmp', 'svg', 'gif', 'jpeg', 'css', 'js', 'cur', 'ico', 'zip', 'txt', 'apk',
                 'dmg']
-    PSL = PublicSuffixList()
+
+    # PUBLIC_SUFFIX_LIST_URL = 'http://publicsuffix.org/list/public_suffix_list.dat'
+    PSL = PublicSuffixList(codecs.open('public_suffix_list.dat', encoding='utf8'))
 
     def __init__(self, url):
         self.is_url = True
@@ -71,7 +70,7 @@ class URL(object):
         return self._p.hostname
 
     @property
-    def root_domain(self):
+    def domain(self):
         return self.PSL.get_public_suffix(self.hostname)
 
     @property
@@ -108,9 +107,18 @@ class URL(object):
         return self._p.fragment
 
     @property
-    def pattern(self):
+    def store_pattern(self):
         """
-        :param urlstring:
+        use by producer to query whether url is storred in mongodb
+        :return:
+        """
+        return urlparse.urlunsplit((self.scheme, self.netloc, self.spider_pattern, '', ''))
+
+    @property
+    def spider_pattern(self):
+        """
+        used by spider to query whether url is scanned
+        stored in redis hashtable '{scheme://netloc}'
         :return:
         """
         path_pattern = re.sub('\d+', 'd+', self._p.path)
@@ -127,5 +135,7 @@ class URL(object):
 
 
 if __name__ == '__main__':
-    print URL(
-        'http://www.baidu.com/fuck/kjskdjf.php?args=kjsdfu&k=kuc&iiii=ksnc#skdf').pattern()
+    urlstring = 'http://www.test.com/fuck/kjskdjf.php?args=kjsdfu&k=kuc&ii=ksc#skdf'
+    url = URL(urlstring)
+    print url.spider_pattern
+    print url.store_pattern

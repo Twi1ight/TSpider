@@ -20,8 +20,10 @@ class Logger(object):
 
     logger = None
 
-    def __init__(self):
-        Logger.logger = self._init()
+    def __init__(self, log_path='log/tspider', level=logging.INFO, when="D", backup=7,
+                 format="%(levelname)s: %(asctime)s: %(filename)s:%(lineno)d * %(message)s",
+                 datefmt="%Y-%m-%d %H:%M:%S"):
+        Logger.logger = self._init(log_path, level, when, backup, format, datefmt)
 
     @staticmethod
     def _init(log_path='log/tspider', level=logging.INFO, when="D", backup=7,
@@ -77,4 +79,4 @@ class Logger(object):
         return logger
 
 
-logger = Logger().logger
+logger = Logger(level=logging.DEBUG).logger
