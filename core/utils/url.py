@@ -28,11 +28,10 @@ class URL(object):
 
     def __init__(self, url):
         self.is_url = True
-        urlstring = self.normalize_url(url)
-        if not urlstring:
+        self.urlstring = self.normalize_url(url)
+        if not self.urlstring:
             self.is_url = False
-        self.urlstring = urlstring
-        self._p = urlparse.urlsplit(url)
+        self._p = urlparse.urlsplit(self.urlstring)
 
     @staticmethod
     def normalize_url(url):

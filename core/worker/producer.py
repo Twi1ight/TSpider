@@ -47,7 +47,7 @@ class Producer(object):
         if not self.redis or not self.mongodb.connected():
             logger.error('no redis/mongodb connection found! exit.')
             return
-        logger.info(self.tld)
+
         while True:
             _, req = self.redis.brpop(self.result_queue, 0)
             logger.info('got req, %d results left' % self.redis.llen(self.result_queue))
