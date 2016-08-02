@@ -1,14 +1,20 @@
 #!/usr/bin/python
 # -*- coding:utf-8 -*-
 #
-# -----------------------------------------------------------
-# Author:      chensongnian@baidu.com
-# Created:     16/8/1 下午5:04
-# Copyright:   (c) 2016 Baidu.com, Inc. All Rights Reserved
-# -----------------------------------------------------------
 """
 settings
 """
+import os
+import logging
+
+MODULE_PATH = os.path.dirname(os.path.realpath(__file__))
+SPIDER_PATH = os.path.join(MODULE_PATH, 'core/spider')
+TMPDIR_PATH = os.path.join(MODULE_PATH, '.tmp')
+
+LOG_PATH = os.path.join(MODULE_PATH, 'log/tspider')
+LOG_LEVEL = logging.DEBUG
+
+PSL_FILE_PATH = os.path.join(MODULE_PATH, 'core/utils/public_suffix_list.dat')
 
 
 class RedisConf(object):

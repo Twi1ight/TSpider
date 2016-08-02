@@ -6,10 +6,10 @@ producer
 """
 import json
 import redis
-from log import logger
-from mongodb import MongoUtils
 from settings import RedisConf
-from url_utils import URL
+from core.utils.mongodb import MongoUtils
+from core.utils.url import URL
+from core.utils.log import logger
 
 
 class Producer(object):
@@ -29,10 +29,8 @@ class Producer(object):
         :param tld: scan same top-level-domain subdomains. Scan only subdomain itself when tld=False
         :return:
         """
-
         self.redis = redis.StrictRedis(host=RedisConf.host, port=RedisConf.port,
                                        db=redis_db, password=RedisConf.password)
-        self.mongodb = MongoUtils()
         self.task_queue = task_queue
         self.result_queue = result_queue
         self.domain_queue = domain_queue
@@ -44,9 +42,12 @@ class Producer(object):
             self.redis = None
 
     def produce(self):
-        if not self.redis or not self.mongodb:
+        # mongodb with multipleprocessing must be init after fork
+        self.mongodb = MongoUtils()
+        if not self.redis or not self.mongodb.connected():
             logger.error('no redis/mongodb connection found! exit.')
             return
+        logger.info(self.tld)
         while True:
             _, req = self.redis.brpop(self.result_queue, 0)
             logger.info('got req, %d results left' % self.redis.llen(self.result_queue))
@@ -114,7 +115,7 @@ class Producer(object):
         else:
             return self.redis.hexists(self.domain_queue, url.hostname)
 
-    def set_whitedomain(self, url):
+    def set_targetdomain(self, url):
         """
         :param url: URL class instance
         :return:
@@ -133,21 +134,21 @@ class Producer(object):
         # set scanned hash table
         self.set_scanned(url)
 
-    def create_file_task(self, filename):
+    def create_file_task(self, fileobj):
         """
         create task from file
         :param filename:
         :return:
         """
-        with open(filename) as f:
-            for line in f:
+        with fileobj:
+            for line in fileobj:
                 line = line.strip()
                 if not line:
                     continue
                 url = URL(line)
-                if not url.is_url:
+                if not url.is_url or url.is_block_ext():
                     continue
-                self.set_whitedomain(url)
+                self.set_targetdomain(url)
                 self.create_url_task(url)
 
 
@@ -156,6 +157,9 @@ if __name__ == '__main__':
     # no scan www.aisec.cn even got links from demo.aisc.cn
     p = Producer(tld=False)
     url = URL('http://demo.aisec.cn/demo/aisec/')
-    p.set_whitedomain(url)
+    p.set_targetdomain(url)
     p.create_url_task(url)
     p.produce()
+
+    # with open('test.txt') as f:
+    #     p.create_file_task(f)

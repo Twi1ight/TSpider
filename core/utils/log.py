@@ -1,11 +1,6 @@
 #!/usr/bin/python
 # -*- coding:utf-8 -*-
 #
-# -----------------------------------------------------------
-# Author:      chensongnian@baidu.com
-# Created:     16/8/1 下午4:37
-# Copyright:   (c) 2016 Baidu.com, Inc. All Rights Reserved
-# -----------------------------------------------------------
 """
 log.py
 """
@@ -14,16 +9,21 @@ import os
 import logging
 import logging.handlers
 
+from settings import LOG_PATH, LOG_LEVEL
 
-class Logger(object):
+
+class CLogger(object):
     __slots__ = ('logger')
 
-    logger = None
+    __logger = None
 
     def __init__(self, log_path='log/tspider', level=logging.INFO, when="D", backup=7,
-                 format="%(levelname)s: %(asctime)s: %(filename)s:%(lineno)d * %(message)s",
+                 format="%(levelname)s: %(asctime)s: %(filename)s:%(lineno)d %(processName)s * %(message)s",
                  datefmt="%Y-%m-%d %H:%M:%S"):
-        Logger.logger = self._init(log_path, level, when, backup, format, datefmt)
+        CLogger.__logger = self._init(log_path, level, when, backup, format, datefmt)
+
+    def get_logger(self):
+        return CLogger.__logger
 
     @staticmethod
     def _init(log_path='log/tspider', level=logging.INFO, when="D", backup=7,
@@ -48,7 +48,7 @@ class Logger(object):
                           default value: 'D'
           format        - format of the log
                           default format:
-                          %(levelname)s: %(asctime)s: %(filename)s:%(lineno)d * %(message)s
+                          %(levelname)s: %(asctime)s: %(filename)s:%(lineno)d %(processName)s * %(message)s
                           INFO: 2016-12-09 18:02:42: log.py:40 * HELLO WORLD
           backup        - how many backup file to keep
                           default value: 7
@@ -79,4 +79,4 @@ class Logger(object):
         return logger
 
 
-logger = Logger(level=logging.DEBUG).logger
+logger = CLogger(log_path=LOG_PATH, level=LOG_LEVEL).get_logger()

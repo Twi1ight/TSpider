@@ -9,6 +9,7 @@ import codecs
 import re
 import urlparse
 from publicsuffix import PublicSuffixList
+from settings import PSL_FILE_PATH
 
 
 class URL(object):
@@ -23,7 +24,7 @@ class URL(object):
                 'dmg']
 
     # PUBLIC_SUFFIX_LIST_URL = 'http://publicsuffix.org/list/public_suffix_list.dat'
-    PSL = PublicSuffixList(codecs.open('public_suffix_list.dat', encoding='utf8'))
+    PSL = PublicSuffixList(codecs.open(PSL_FILE_PATH, encoding='utf8'))
 
     def __init__(self, url):
         self.is_url = True

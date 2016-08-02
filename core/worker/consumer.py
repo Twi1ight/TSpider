@@ -5,10 +5,11 @@
 consumer
 """
 import time
+
 import redis
-from log import logger
+from core.spider.spider import SpiderPage
+from core.utils.log import logger
 from settings import RedisConf
-from spider import SpiderPage
 
 
 # r = redis.StrictRedis(host=Redis.host, port=Redis.port,

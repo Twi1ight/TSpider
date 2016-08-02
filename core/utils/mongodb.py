@@ -1,11 +1,6 @@
 #!/usr/bin/python
 # -*- coding:utf-8 -*-
 #
-# -----------------------------------------------------------
-# Author:      chensongnian@baidu.com
-# Created:     16/8/1 下午7:33
-# Copyright:   (c) 2016 Baidu.com, Inc. All Rights Reserved
-# -----------------------------------------------------------
 """
 mongodb
 """
@@ -15,16 +10,20 @@ from pymongo import MongoClient
 
 
 class MongoUtils(object):
-    def __init__(self, database='tspider', target_collection='targetresult',
+    def __init__(self, connect=False, database='tspider', target_collection='targetresult',
                  other_collection='otheresult'):
         try:
-            self._client = MongoClient('mongodb://{}:{}'.format(MongoConf.host, MongoConf.port))
+            self._client = MongoClient('mongodb://{}:{}'.format(MongoConf.host, MongoConf.port),
+                                       connect=connect)
             self._client.server_info()
             self._target = self._client[database][target_collection]
             self._other = self._client[database][other_collection]
         except:
             logger.exception('connect mongodb failed!')
             self._client = None
+
+    def connected(self):
+        return True if self._client else False
 
     def save(self, reqdict, is_target=True):
         if not self._client or self.exists(reqdict, is_target):
