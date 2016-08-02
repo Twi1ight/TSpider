@@ -13,7 +13,11 @@ exports.evilResource = function (url) {
     var extension = utils.fileExt(filename);
     var hostname = parser.hostname;
     //todo stastic urls / ad urls
+<<<<<<< 57ea5cf0e5330692fa4e624986b60919509782d7:core/spider/core.js
     if (hostname.match('bdstatic\.com|hm\.baidu\.com|[^\.]+\.cnzz\.com')) {
+=======
+    if (hostname.match('hm\.baidu\.com')) {
+>>>>>>> work like a charm:core/spider/core.js
         return true
     }
     var exclude = ['a3c', 'ace', 'aif', 'aifc', 'aiff', 'arj', 'asf', 'asx', 'attach', 'au',
