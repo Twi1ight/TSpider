@@ -20,7 +20,7 @@ class Producer(object):
     """
 
     def __init__(self, redis_db=0, task_queue='spider:task', result_queue='spider:result',
-                 domain_queue='spider:whitedomain', tld=True):
+                 domain_queue='spider:targetdomain', tld=True):
         """
         :param redis_db:
         :param task_queue:
@@ -69,24 +69,25 @@ class Producer(object):
                      'hostname': url.hostname,
                      'domain': url.domain
                      })
-        self.mongodb.save(data)
+        target = self.is_target(url)
+        self.mongodb.save(data, is_target=target)
 
         # check scanned
         if self.is_scanned(url):
             logger.debug('%s already scanned, skip' % url.urlstring)
         else:
+            if not target:
+                logger.debug('%s is not target' % url.domain if self.tld else url.hostname)
+                return
             # filter js img etc.
             if url.is_block_ext():
                 logger.debug('block ext found: %s' % url.urlstring)
-                return
-            if not self.is_whitedomain(url):
-                logger.debug('%s not white domain' % url.domain)
                 return
             if data.get('method', '') == 'GET':
                 self.create_url_task(url)
             else:
                 # todo post req
-                logger.error(data)
+                logger.debug(data)
                 pass
 
     def set_scanned(self, url):
@@ -103,7 +104,7 @@ class Producer(object):
         """
         return self.redis.hexists(url.hashtable, url.spider_pattern)
 
-    def is_whitedomain(self, url):
+    def is_target(self, url):
         """
         :param url: URL class instance
         :return:

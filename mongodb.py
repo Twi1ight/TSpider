@@ -15,20 +15,23 @@ from pymongo import MongoClient
 
 
 class MongoUtils(object):
-    def __init__(self, database='tspider', collection='spideresult'):
+    def __init__(self, database='tspider', target_collection='targetresult',
+                 other_collection='otheresult'):
         try:
             self._client = MongoClient('mongodb://{}:{}'.format(MongoConf.host, MongoConf.port))
             self._client.server_info()
-            self.handle = self._client[database][collection]
+            self._target = self._client[database][target_collection]
+            self._other = self._client[database][other_collection]
         except:
             logger.exception('connect mongodb failed!')
             self._client = None
 
-    def save(self, reqdict):
-        if not self._client or self.exsits(reqdict):
+    def save(self, reqdict, is_target=True):
+        if not self._client or self.exists(reqdict, is_target):
             return
         try:
-            result = self.handle.insert_one(reqdict)
+            handle = self._target if is_target else self._other
+            result = handle.insert_one(reqdict)
             if result.acknowledged:
                 logger.debug('insert success: %s' % str(result.inserted_id))
                 return
@@ -36,13 +39,14 @@ class MongoUtils(object):
         except:
             logger.exception('mongodb save exception!')
 
-    def exsits(self, reqdict):
+    def exists(self, reqdict, is_target=True):
         if not self._client:
             return False
         try:
             query = {'method': reqdict.get('method', ''),
                      'pattern': reqdict.get('pattern', '')}
-            cursor = self.handle.find(query, limit=1)
+            handle = self._target if is_target else self._other
+            cursor = handle.find(query, limit=1)
             if cursor.count() > 0:
                 logger.debug('document exists: %s-%s' % (query['method'], query['pattern']))
                 return True
@@ -56,6 +60,6 @@ class MongoUtils(object):
 if __name__ == '__main__':
     c = MongoUtils()
     c.save({'test': 'test1'})
-    print c.exsits({'test': 'test1'})
+    print c.exists({'test': 'test1'})
     c.save({'test': 'test2'})
     c.save({'test1': 'test3'})
