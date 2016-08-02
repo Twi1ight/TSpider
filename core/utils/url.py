@@ -107,12 +107,21 @@ class URL(object):
         return self._p.fragment
 
     @property
-    def store_pattern(self):
+    def store_pattern_mongodb(self):
         """
         use by producer to query whether url is storred in mongodb
         :return:
         """
         return urlparse.urlunsplit((self.scheme, self.netloc, self.spider_pattern, '', ''))
+
+    def store_pattern_redis(self, method):
+        """
+        for producer to query whether url is saved to mongodb
+        rewrite store_pattern_mongodb for performace
+        :return:
+        """
+        url_pattern = urlparse.urlunsplit((self.scheme, self.netloc, self.spider_pattern, '', ''))
+        return '{}-{}'.format(method, url_pattern)
 
     @property
     def spider_pattern(self):
@@ -138,4 +147,4 @@ if __name__ == '__main__':
     urlstring = 'http://www.test.com/fuck/kjskdjf.php?args=kjsdfu&k=kuc&ii=ksc#skdf'
     url = URL(urlstring)
     print url.spider_pattern
-    print url.store_pattern
+    print url.store_pattern_mongodb

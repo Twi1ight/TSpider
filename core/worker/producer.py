@@ -20,7 +20,8 @@ class Producer(object):
     """
 
     def __init__(self, redis_db=0, task_queue='spider:task', result_queue='spider:result',
-                 domain_queue='spider:targetdomain', status_queue='spider:status', tld=True):
+                 domain_queue='spider:targetdomain', status_queue='spider:status',
+                 pattern_queue='spider:pattern', tld=True):
         """
         :param redis_db:
         :param task_queue:
@@ -40,6 +41,7 @@ class Producer(object):
         self.result_queue = result_queue
         self.domain_queue = domain_queue
         self.status_queue = status_queue
+        self.pattern_queue = pattern_queue
         self.tld = tld
         try:
             self.redis_task.ping()
@@ -72,12 +74,23 @@ class Producer(object):
         url = URL(urlstring)
 
         # store to mongodb
-        data.update({'pattern': url.store_pattern,
+        data.update({'pattern': url.store_pattern_mongodb,
                      'hostname': url.hostname,
                      'domain': url.domain
                      })
         target = self.is_target(url)
-        self.mongodb.save(data, is_target=target)
+
+        method = data.get('method', '')
+        if not method:
+            logger.debug('not method found!')
+            return
+
+        if not self.hash_saved(method, url):
+            logger.debug('redis saved pattern not found!')
+            self.mongodb.save(data, is_target=target)
+            self.set_saved(method, url)
+        else:
+            logger.debug('redis saved pattern found!')
 
         if not target:
             logger.debug('%s is not target' % (url.domain if self.tld else url.hostname))
@@ -89,7 +102,7 @@ class Producer(object):
             return
 
         # todo post req
-        if data.get('method', '') == 'POST':
+        if method == 'POST':
             logger.debug('POST not support now')
             return
 
@@ -102,12 +115,20 @@ class Producer(object):
             logger.info('%s max req count reached!' % url.hostname)
             return
         # all is well
-        if data.get('method', '') == 'GET':
+        if method == 'GET':
             self.create_url_task(url)
         else:
             # todo post req
             logger.debug(data)
             pass
+
+    def set_saved(self, method, url):
+        pattern = url.store_pattern_redis(method)
+        self.redis_cache.hsetnx(self.pattern_queue, pattern, '*')
+
+    def hash_saved(self, method, url):
+        pattern = url.store_pattern_redis(method)
+        return self.redis_cache.hexists(self.pattern_queue, pattern)
 
     def incr_req_count(self, hostname):
         self.redis_task.hincrby(self.status_queue, hostname, 1)

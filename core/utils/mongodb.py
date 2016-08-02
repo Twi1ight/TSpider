@@ -26,8 +26,15 @@ class MongoUtils(object):
     def connected(self):
         return True if self._client else False
 
-    def save(self, reqdict, is_target=True):
-        if not self._client or self.exists(reqdict, is_target):
+    def save(self, reqdict, is_target=True, check_exists=False):
+        if not self._client:
+            return
+
+        # should use redis check outside, only set check_exists to True if redis data lost
+        # mongodb use too much CPU if no index created on (method, pattern)
+        # db.targetresult.ensureIndex({method:1, pattern:1})
+        # db.otheresult.ensureIndex({method:1, pattern:1})
+        if check_exists and self.exists(reqdict, is_target):
             return
         try:
             handle = self._target if is_target else self._other
