@@ -4,11 +4,10 @@
 """
 producer
 """
-import redis
 import json
 
 from core.utils.redis_utils import RedisUtils
-from settings import RedisConf, MAX_URL_REQUEST_PER_SITE
+from settings import MAX_URL_REQUEST_PER_SITE
 from core.utils.mongodb import MongoUtils
 from core.utils.url import URL
 from core.utils.log import logger
@@ -46,7 +45,7 @@ class Producer(object):
 
         while True:
             _, req = self.redis_utils.get_result()
-            logger.info('got req, %d results left' % self.redis_utils.get_result_amount())
+            logger.debug('got req, %d results left' % self.redis_utils.get_result_amount())
             self.proc_req(req)
 
     def proc_req(self, req):
@@ -69,7 +68,7 @@ class Producer(object):
 
         method = data.get('method', '')
         if not method:
-            logger.debug('not method found!')
+            logger.error('not method found!')
             return
 
         target = self.redis_utils.is_target(url)
@@ -101,7 +100,7 @@ class Producer(object):
             return
 
         if self.redis_utils.get_hostname_reqcount(url.hostname) > MAX_URL_REQUEST_PER_SITE:
-            logger.info('%s max req count reached!' % url.hostname)
+            logger.debug('%s max req count reached!' % url.hostname)
             return
         # all is well
         if method == 'GET':
@@ -110,65 +109,6 @@ class Producer(object):
             # todo post req
             logger.debug(data)
             pass
-
-    # def set_saved(self, method, url):
-    #     pattern = url.store_pattern_redis(method)
-    #     self.redis_cache.hsetnx(self.pattern_queue, pattern, '*')
-    #
-    # def has_saved(self, method, url):
-    #     pattern = url.store_pattern_redis(method)
-    #     return self.redis_cache.hexists(self.pattern_queue, pattern)
-    #
-    # def incr_req_count(self, hostname):
-    #     self.redis_task.hincrby(self.status_queue, hostname, 1)
-    #
-    # def get_req_count(self, hostname):
-    #     return self.redis_task.hget(self.status_queue, hostname)
-    #
-    # def set_scanned(self, url):
-    #     """
-    #     :param url: URL class instance
-    #     :return:
-    #     """
-    #     self.redis_cache.hsetnx(url.hashtable, url.spider_pattern, '*')
-    #
-    # def is_scanned(self, url):
-    #     """
-    #     :param url: URL class instance
-    #     :return:
-    #     """
-    #     return self.redis_cache.hexists(url.hashtable, url.spider_pattern)
-    #
-    # def is_target(self, url):
-    #     """
-    #     :param url: URL class instance
-    #     :return:
-    #     """
-    #     if self.tld:
-    #         return self.redis_task.hexists(self.domain_queue, url.domain)
-    #     else:
-    #         return self.redis_task.hexists(self.domain_queue, url.hostname)
-    #
-    # def set_targetdomain(self, url):
-    #     """
-    #     :param url: URL class instance
-    #     :return:
-    #     """
-    #     if self.tld:
-    #         self.redis_task.hsetnx(self.domain_queue, url.domain, '*')
-    #     else:
-    #         self.redis_task.hsetnx(self.domain_queue, url.hostname, '*')
-    #
-    # def create_url_task(self, url):
-    #     """
-    #     :param url: URL class instance
-    #     :return:
-    #     """
-    #     self.redis_task.lpush(self.task_queue, url.urlstring)
-    #     # set scanned hash table
-    #     self.set_scanned(url)
-    #     # incr req count
-    #     self.incr_req_count(url.hostname)
 
     def create_file_task(self, fileobj):
         """
@@ -179,8 +119,7 @@ class Producer(object):
         with fileobj:
             for line in fileobj:
                 line = line.strip()
-                if not line:
-                    continue
+                if not line: continue
                 url = URL(line)
                 if not url.is_url or url.is_block_ext():
                     continue

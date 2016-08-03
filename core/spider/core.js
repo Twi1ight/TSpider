@@ -13,7 +13,7 @@ exports.evilResource = function (url) {
     var extension = utils.fileExt(filename);
     var hostname = parser.hostname;
     //todo stastic urls / ad urls
-    if (hostname.match('hm\.baidu\.com')) {
+    if (hostname.match('hm\.baidu\.com|googleads\.g\.doubleclick\.net')) {
         return true
     }
     var exclude = ['a3c', 'ace', 'aif', 'aifc', 'aiff', 'arj', 'asf', 'asx', 'attach', 'au',
@@ -221,7 +221,7 @@ exports.FireintheHole = function () {
             method = 'GET';
             referer = window.location.href;
             url = elements[i][src];
-            if (url && urls.indexOf(url) < 0 && !badScheme(url)) {
+            if (url && urls.indexOf(url) < 0 && validScheme(url) && url.length < 1024) {
                 request = method + '|||' + rmFragment(url) + '|||null|||' + rmFragment(document.baseURI);
                 if (urls.indexOf(request) < 0) {
                     urls.push(request);
@@ -241,9 +241,8 @@ exports.FireintheHole = function () {
         handleTag('audio', 'src');
     }
 
-    function badScheme(url) {
-        var schemes = ['javascript:', 'mailto:', 'irc:', 'tencent:', 'magnet:', 'thunder:',
-            'qqdl:', 'flashget:', 'ed2k:'];
+    function validScheme(url) {
+        var schemes = ['http', 'https'];
         for (var i = 0; i < schemes.length; i++) {
             if (startsWith(url, schemes[i])) {
                 return true

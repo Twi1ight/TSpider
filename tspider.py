@@ -26,7 +26,7 @@ def cmdparse():
                         help='load target from file')
     parser.add_argument('--tld', action='store_true', dest='tld',
                         help='spider all subdomains')
-    parser.add_argument('--continue', dest='continue', action='store_true',
+    parser.add_argument('--continue', dest='keepon', action='store_true',
                         help='continue last task, no init target [-u|-f] need')
     worker = parser.add_argument_group(title='Worker', description='opionts for worker')
     worker.add_argument('-c', '--consumer', metavar='N', type=int, default=1, dest='consumer',
@@ -34,14 +34,13 @@ def cmdparse():
     worker.add_argument('-p', '--producer', metavar='N', type=int, default=1, dest='producer',
                         help='producers to run')
     arg = parser.parse_args()
-    if not any([arg.url, arg.file]):
+    if not any([arg.url, arg.file, arg.keepon]):
         parser.exit(parser.format_help())
     return arg
 
 
 if __name__ == '__main__':
     arg = cmdparse()
-    target = arg.url or arg.file
     tld_enable = arg.tld
     producer_pool = []
     consumer_pool = []
@@ -54,19 +53,21 @@ if __name__ == '__main__':
         proc.start()
         producer_pool.append(proc)
 
-    producer = Producer(tld=tld_enable)
-    if isinstance(target, basestring):
+    if not arg.keepon:
+        target = arg.url or arg.file
+        producer = Producer(tld=tld_enable)
+        if isinstance(target, basestring):
 
-        url = URL(target)
-        if not url.is_url or url.is_block_ext():
-            logger.error('not valid url, exit.')
-            sys.exit(-1)
-        producer.set_targetdomain(url)
-        producer.create_url_task(url)
-    # file object
-    else:
-        with target:
-            producer.create_file_task(target)
+            url = URL(target)
+            if not url.is_url or url.is_block_ext():
+                logger.error('not valid url, exit.')
+                sys.exit(-1)
+            producer.redis_utils.add_targetdomain(url)
+            producer.redis_utils.create_url_task(url)
+        # file object
+        else:
+            with target:
+                producer.create_file_task(target)
 
     map(lambda x: x.join(), consumer_pool)
     map(lambda x: x.join(), producer_pool)

@@ -70,7 +70,7 @@ class SpiderPage(object):
                   '{cmd} "{url}" "{file}"'.format(cmd=crawler_file, url=self._url, file=spiderfile)
         try:
             returncode = subprocess.check_call(command, shell=True)
-            logger.info('casperjs succeed, return code %d' % returncode)
+            logger.debug('casperjs succeed, return code %d' % returncode)
         except subprocess.CalledProcessError as e:
             logger.error('casperjs failed, return code: %d' % e.returncode)
         except:
