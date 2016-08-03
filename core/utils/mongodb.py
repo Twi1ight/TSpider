@@ -63,6 +63,15 @@ class MongoUtils(object):
             logger.exception('mongodb exists excepiton!')
             return False
 
+    def query(self, querystring, fields, is_target=True):
+        try:
+            handle = self._target if is_target else self._other
+            cursor = handle.find(querystring, fields)
+            for doc in cursor:
+                yield doc
+        except:
+            logger.exception('mongodb query exception!')
+
 
 if __name__ == '__main__':
     c = MongoUtils()

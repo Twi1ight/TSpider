@@ -6,6 +6,8 @@ producer
 """
 import redis
 import json
+
+from core.utils.redis_utils import RedisUtils
 from settings import RedisConf, MAX_URL_REQUEST_PER_SITE
 from core.utils.mongodb import MongoUtils
 from core.utils.url import URL
@@ -20,45 +22,31 @@ class Producer(object):
     """
 
     def __init__(self, redis_db=0, task_queue='spider:task', result_queue='spider:result',
-                 domain_queue='spider:targetdomain', status_queue='spider:status',
-                 pattern_queue='spider:pattern', tld=True):
+                 domain_queue='spider:targetdomain', reqcount_queue='spider:reqcount',
+                 saved_queue='spider:saved', tld=True):
         """
         :param redis_db:
         :param task_queue:
         :param result_queue:
         :param domain_queue:
-        :param status_queue:
+        :param reqcount_queue:
         :param tld: scan same top-level-domain subdomains. Scan only subdomain itself when tld=False
         :return:
         """
-        self.redis_task = redis.StrictRedis(host=RedisConf.host, port=RedisConf.port,
-                                            db=redis_db, password=RedisConf.password)
-        cache_db = (redis_db + 1) % 15
-        # redis handle for cached url pattern
-        self.redis_cache = redis.StrictRedis(host=RedisConf.host, port=RedisConf.port,
-                                             db=cache_db, password=RedisConf.password)
-        self.task_queue = task_queue
-        self.result_queue = result_queue
-        self.domain_queue = domain_queue
-        self.status_queue = status_queue
-        self.pattern_queue = pattern_queue
+        self.redis_utils = RedisUtils(redis_db, task_queue, result_queue, domain_queue,
+                                      reqcount_queue, saved_queue, tld)
         self.tld = tld
-        try:
-            self.redis_task.ping()
-        except:
-            logger.exception('connect to redis failed!')
-            self.redis_task = None
 
     def produce(self):
         # mongodb with multipleprocessing must be init after fork
         self.mongodb = MongoUtils()
-        if not self.redis_task or not self.mongodb.connected:
+        if not self.redis_utils.connected or not self.mongodb.connected:
             logger.error('no redis/mongodb connection found! exit.')
             return
 
         while True:
-            _, req = self.redis_task.brpop(self.result_queue, 0)
-            logger.info('got req, %d results left' % self.redis_task.llen(self.result_queue))
+            _, req = self.redis_utils.get_result()
+            logger.info('got req, %d results left' % self.redis_utils.get_result_amount())
             self.proc_req(req)
 
     def proc_req(self, req):
@@ -78,17 +66,18 @@ class Producer(object):
                      'hostname': url.hostname,
                      'domain': url.domain
                      })
-        target = self.is_target(url)
 
         method = data.get('method', '')
         if not method:
             logger.debug('not method found!')
             return
 
-        if not self.hash_saved(method, url):
+        target = self.redis_utils.is_target(url)
+
+        if not self.redis_utils.is_url_saved(method, url):
             logger.debug('redis saved pattern not found!')
             self.mongodb.save(data, is_target=target)
-            self.set_saved(method, url)
+            self.redis_utils.set_url_saved(method, url)
         else:
             logger.debug('redis saved pattern found!')
 
@@ -107,79 +96,79 @@ class Producer(object):
             return
 
         # check scanned
-        if self.is_scanned(url):
+        if self.redis_utils.is_url_scanned(url):
             logger.debug('%s already scanned, skip' % url.urlstring)
             return
 
-        if self.get_req_count(url.hostname) > MAX_URL_REQUEST_PER_SITE:
+        if self.redis_utils.get_hostname_reqcount(url.hostname) > MAX_URL_REQUEST_PER_SITE:
             logger.info('%s max req count reached!' % url.hostname)
             return
         # all is well
         if method == 'GET':
-            self.create_url_task(url)
+            self.redis_utils.create_url_task(url)
         else:
             # todo post req
             logger.debug(data)
             pass
 
-    def set_saved(self, method, url):
-        pattern = url.store_pattern_redis(method)
-        self.redis_cache.hsetnx(self.pattern_queue, pattern, '*')
-
-    def hash_saved(self, method, url):
-        pattern = url.store_pattern_redis(method)
-        return self.redis_cache.hexists(self.pattern_queue, pattern)
-
-    def incr_req_count(self, hostname):
-        self.redis_task.hincrby(self.status_queue, hostname, 1)
-
-    def get_req_count(self, hostname):
-        return self.redis_task.hget(self.status_queue, hostname)
-
-    def set_scanned(self, url):
-        """
-        :param url: URL class instance
-        :return:
-        """
-        self.redis_cache.hsetnx(url.hashtable, url.spider_pattern, '*')
-
-    def is_scanned(self, url):
-        """
-        :param url: URL class instance
-        :return:
-        """
-        return self.redis_cache.hexists(url.hashtable, url.spider_pattern)
-
-    def is_target(self, url):
-        """
-        :param url: URL class instance
-        :return:
-        """
-        if self.tld:
-            return self.redis_task.hexists(self.domain_queue, url.domain)
-        else:
-            return self.redis_task.hexists(self.domain_queue, url.hostname)
-
-    def set_targetdomain(self, url):
-        """
-        :param url: URL class instance
-        :return:
-        """
-        if self.tld:
-            self.redis_task.hsetnx(self.domain_queue, url.domain, '*')
-        else:
-            self.redis_task.hsetnx(self.domain_queue, url.hostname, '*')
-
-    def create_url_task(self, url):
-        """
-        :param url: URL class instance
-        :return:
-        """
-        self.redis_task.lpush(self.task_queue, url.urlstring)
-        # set scanned hash table
-        self.set_scanned(url)
-        # incr req count
-        self.incr_req_count(url.hostname)
+    # def set_saved(self, method, url):
+    #     pattern = url.store_pattern_redis(method)
+    #     self.redis_cache.hsetnx(self.pattern_queue, pattern, '*')
+    #
+    # def has_saved(self, method, url):
+    #     pattern = url.store_pattern_redis(method)
+    #     return self.redis_cache.hexists(self.pattern_queue, pattern)
+    #
+    # def incr_req_count(self, hostname):
+    #     self.redis_task.hincrby(self.status_queue, hostname, 1)
+    #
+    # def get_req_count(self, hostname):
+    #     return self.redis_task.hget(self.status_queue, hostname)
+    #
+    # def set_scanned(self, url):
+    #     """
+    #     :param url: URL class instance
+    #     :return:
+    #     """
+    #     self.redis_cache.hsetnx(url.hashtable, url.spider_pattern, '*')
+    #
+    # def is_scanned(self, url):
+    #     """
+    #     :param url: URL class instance
+    #     :return:
+    #     """
+    #     return self.redis_cache.hexists(url.hashtable, url.spider_pattern)
+    #
+    # def is_target(self, url):
+    #     """
+    #     :param url: URL class instance
+    #     :return:
+    #     """
+    #     if self.tld:
+    #         return self.redis_task.hexists(self.domain_queue, url.domain)
+    #     else:
+    #         return self.redis_task.hexists(self.domain_queue, url.hostname)
+    #
+    # def set_targetdomain(self, url):
+    #     """
+    #     :param url: URL class instance
+    #     :return:
+    #     """
+    #     if self.tld:
+    #         self.redis_task.hsetnx(self.domain_queue, url.domain, '*')
+    #     else:
+    #         self.redis_task.hsetnx(self.domain_queue, url.hostname, '*')
+    #
+    # def create_url_task(self, url):
+    #     """
+    #     :param url: URL class instance
+    #     :return:
+    #     """
+    #     self.redis_task.lpush(self.task_queue, url.urlstring)
+    #     # set scanned hash table
+    #     self.set_scanned(url)
+    #     # incr req count
+    #     self.incr_req_count(url.hostname)
 
     def create_file_task(self, fileobj):
         """
@@ -195,8 +184,8 @@ class Producer(object):
                 url = URL(line)
                 if not url.is_url or url.is_block_ext():
                     continue
-                self.set_targetdomain(url)
-                self.create_url_task(url)
+                self.redis_utils.add_targetdomain(url)
+                self.redis_utils.create_url_task(url)
 
 
 if __name__ == '__main__':
@@ -204,8 +193,8 @@ if __name__ == '__main__':
     # no scan www.aisec.cn even got links from demo.aisc.cn
     p = Producer(tld=False)
     url = URL('http://demo.aisec.cn/demo/aisec/')
-    p.set_targetdomain(url)
-    p.create_url_task(url)
+    p.redis_utils.add_targetdomain(url)
+    p.redis_utils.create_url_task(url)
     p.produce()
 
     # with open('test.txt') as f:

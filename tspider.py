@@ -12,22 +12,27 @@ from core.utils.log import logger
 from core.utils.url import URL
 from core.worker.consumer import Consumer
 from core.worker.producer import Producer
+from settings import VERSION
 
 
 def cmdparse():
-    parser = argparse.ArgumentParser(usage='%(prog)s [options]',
+    parser = argparse.ArgumentParser(usage='\n%(prog)s [options] [-u url|-f file.txt]'
+                                           '\n%(prog)s [options] --continue',
                                      description='A web spider',
-                                     version='1.0')
-    parser.add_argument('-c', '--consumer', metavar='N', type=int, default=1, dest='consumer',
-                        help='consumers to run')
-    parser.add_argument('-p', '--producer', metavar='N', type=int, default=1, dest='producer',
-                        help='producers to run')
+                                     version=VERSION)
     parser.add_argument('-u', '--url', dest='url',
                         help='target url, if no tld, only urls in this subdomain')
     parser.add_argument('-f', '--file', dest='file', type=open,
                         help='load target from file')
     parser.add_argument('--tld', action='store_true', dest='tld',
                         help='spider all subdomains')
+    parser.add_argument('--continue', dest='continue', action='store_true',
+                        help='continue last task, no init target [-u|-f] need')
+    worker = parser.add_argument_group(title='Worker', description='opionts for worker')
+    worker.add_argument('-c', '--consumer', metavar='N', type=int, default=1, dest='consumer',
+                        help='consumers to run')
+    worker.add_argument('-p', '--producer', metavar='N', type=int, default=1, dest='producer',
+                        help='producers to run')
     arg = parser.parse_args()
     if not any([arg.url, arg.file]):
         parser.exit(parser.format_help())
