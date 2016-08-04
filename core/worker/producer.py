@@ -89,6 +89,12 @@ class Producer(object):
             logger.debug('block ext found: %s' % url.urlstring)
             return
 
+        # patch for alicdn url:
+        # http://m.alicdn.com/home-node/4.0.18/??css/reset.css,css/common.css,css/header.css
+        if url.path.endswith('/') and url.querystring.startswith('?'):
+            logger.debug('alicdn file: %s' % url.urlstring)
+            return
+
         # todo post req
         if method == 'POST':
             logger.debug('POST not support now')
@@ -104,6 +110,7 @@ class Producer(object):
             return
         # all is well
         if method == 'GET':
+            logger.debug('add task: %s' % url.urlstring)
             self.redis_utils.create_url_task(url)
         else:
             # todo post req

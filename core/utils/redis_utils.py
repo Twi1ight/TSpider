@@ -1,11 +1,6 @@
 #!/usr/bin/python
 # -*- coding:utf-8 -*-
 #
-# -----------------------------------------------------------
-# Author:      chensongnian@baidu.com
-# Created:     16/8/3 上午10:56
-# Copyright:   (c) 2016 Baidu.com, Inc. All Rights Reserved
-# -----------------------------------------------------------
 """
 redis_task
 """
