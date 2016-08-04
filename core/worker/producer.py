@@ -86,7 +86,7 @@ class Producer(object):
 
         # filter js img etc.
         if url.is_block_ext():
-            logger.debug('block ext found: %s' % url.urlstring)
+            logger.debug('block ext found')
             return
 
         # patch for alicdn url:

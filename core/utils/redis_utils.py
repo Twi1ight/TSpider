@@ -63,7 +63,10 @@ class RedisUtils(object):
         self.redis_task.hincrby(self.reqcount_queue, hostname, 1)
 
     def get_hostname_reqcount(self, hostname):
-        return self.redis_task.hget(self.reqcount_queue, hostname)
+        # fixed on 2016-08-04
+        # hget return string if exists key else None
+        count = self.redis_task.hget(self.reqcount_queue, hostname)
+        return int(count) if count else 0
 
     def set_url_scanned(self, url):
         """
