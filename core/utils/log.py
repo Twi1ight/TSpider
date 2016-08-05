@@ -4,6 +4,7 @@
 """
 https://github.com/jruere/multiprocessing-logging
 """
+import logging
 import logging.handlers
 import multiprocessing
 import os
@@ -22,7 +23,7 @@ def install_mp_handler(logger=None):
 
     for i, orig_handler in enumerate(list(logger.handlers)):
         handler = MultiProcessingHandler(
-            'mp-handler-{0}'.format(i), sub_handler=orig_handler)
+                'mp-handler-{0}'.format(i), sub_handler=orig_handler)
 
         logger.removeHandler(orig_handler)
         logger.addHandler(handler)
@@ -91,19 +92,8 @@ class MultiProcessingHandler(logging.Handler):
         logging.Handler.close(self)
 
 
-def custom_logger(log_path='log/tspider', level=logging.INFO, when="D", backup=7,
-                  format="%(levelname)s: %(asctime)s: %(filename)s:%(lineno)d %(processName)s * %(message)s",
-                  datefmt="%Y-%m-%d %H:%M:%S"):
+def time_rotating_handler(formatter, log_path, level, when="D", backup=7):
     """
-    init_log - initialize log module
-
-    Args:
-      log_path      - Log file path prefix.
-                      Log data will go to two files: log_path.log and log_path.log.wf
-                      Any non-exist parent directories will be created automatically
-      level         - msg above the level will be displayed
-                      DEBUG < INFO < WARNING < ERROR < CRITICAL
-                      the default value is logging.INFO
       when          - how to split the log file by time interval
                       'S' : Seconds
                       'M' : Minutes
@@ -111,16 +101,31 @@ def custom_logger(log_path='log/tspider', level=logging.INFO, when="D", backup=7
                       'D' : Days
                       'W' : Week day
                       default value: 'D'
-      format        - format of the log
-                      default format:
-                      %(levelname)s: %(asctime)s: %(filename)s:%(lineno)d %(processName)s * %(message)s
-                      INFO: 2016-12-09 18:02:42: log.py:40 MainProcess * HELLO WORLD
       backup        - how many backup file to keep
                       default value: 7
+    """
+    handler = logging.handlers.TimedRotatingFileHandler(log_path, when=when, backupCount=backup)
+    handler.setLevel(level)
+    handler.setFormatter(formatter)
+    return handler
 
-    Raises:
-        OSError: fail to create log directories
-        IOError: fail to open log file
+
+def size_rotating_handler(formatter, log_path, level, maxBytes=100 * 1024 * 1024, backup=3):
+    """
+    maxBytes: max log file size
+    """
+    handler = logging.handlers.RotatingFileHandler(log_path, maxBytes=maxBytes, backupCount=backup)
+    handler.setLevel(level)
+    handler.setFormatter(formatter)
+    return handler
+
+
+def custom_logger(log_path='log/tspider.log',
+                  level=logging.INFO,
+                  format="%(levelname)s: %(asctime)s: %(filename)s:%(lineno)d %(processName)s * %(message)s",
+                  datefmt="%Y-%m-%d %H:%M:%S"):
+    """
+    init_log - initialize log module
     """
     formatter = logging.Formatter(format, datefmt)
     logger = logging.getLogger(__package__)
@@ -130,13 +135,13 @@ def custom_logger(log_path='log/tspider', level=logging.INFO, when="D", backup=7
     if not os.path.isdir(dir):
         os.makedirs(dir)
 
-    handler = logging.handlers.TimedRotatingFileHandler(log_path + ".log",
-                                                        when=when,
-                                                        backupCount=backup)
-    handler.setLevel(level)
-    handler.setFormatter(formatter)
+    # handler = time_rotating_handler(formatter, log_path, level)
+    # logger.addHandler(handler)
+
+    handler = size_rotating_handler(formatter, log_path, level)
     logger.addHandler(handler)
 
+    # logging to console
     handler = logging.StreamHandler()
     handler.setLevel(level)
     handler.setFormatter(formatter)

@@ -13,7 +13,7 @@ MODULE_PATH = os.path.dirname(os.path.realpath(__file__))
 SPIDER_PATH = os.path.join(MODULE_PATH, 'core/spider')
 TMPDIR_PATH = os.path.join(MODULE_PATH, '.tmp')
 
-LOG_PATH = os.path.join(MODULE_PATH, 'log/tspider')
+LOG_PATH = os.path.join(MODULE_PATH, 'log/tspider.log')
 LOG_LEVEL = logging.DEBUG
 
 PSL_FILE_PATH = os.path.join(MODULE_PATH, 'core/utils/public_suffix_list.dat')
