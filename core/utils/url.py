@@ -31,7 +31,7 @@ class URL(object):
         self.urlstring = self.normalize_url(url)
         if not self.urlstring:
             self.is_url = False
-        self._p = urlparse.urlsplit(self.urlstring)
+        self._p = urlparse.urlparse(self.urlstring)
 
     @staticmethod
     def normalize_url(url):
@@ -42,7 +42,7 @@ class URL(object):
         # only hostname
         if not '/' in url:
             return 'http://{}'.format(url)
-        p = urlparse.urlsplit(url)
+        p = urlparse.urlparse(url)
         # www.test.com/index.php
         # exclude /xxxxx/index.php
         if not p.netloc:
@@ -54,7 +54,7 @@ class URL(object):
                 return 'http://{}'.format(url)
         # //www.test.com/index.php
         if not p.scheme:
-            url = urlparse.urlunsplit(('http', p.netloc, p.path, p.query, p.fragment))
+            url = urlparse.urlunsplit(('http', p.netloc, p.path, p.query, p.params, p.fragment))
         return url
 
     @property
@@ -116,8 +116,8 @@ class URL(object):
 
     def store_pattern_redis(self, method):
         """
-        for producer to query whether url is saved to mongodb
-        rewrite store_pattern_mongodb for performace
+        for producer to query whether url is saved to redis
+        replace store_pattern_mongodb for performace
         :return:
         """
         url_pattern = urlparse.urlunsplit((self.scheme, self.netloc, self.spider_pattern, '', ''))
