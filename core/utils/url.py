@@ -21,8 +21,8 @@ class URL(object):
                 'qt', 'ra', 'ram', 'rm', 'rpm', 'snd', 'svf', 'tar', 'tgz', 'tif', 'gzip',
                 'tiff', 'tpl', 'uff', 'wav', 'wma', 'wmv', 'doc', 'docx', 'db', 'jpg', 'png',
                 'bmp', 'svg', 'gif', 'jpeg', 'css', 'js', 'cur', 'ico', 'zip', 'txt', 'apk',
-                'dmg']
-    BLOCKHOST = ['mirrors.aliyun.com']
+                'dmg', 'xml', 'jar', 'class', 'torrent']
+    BLOCKHOST = ['mirrors.aliyun.com', 'code.taobao.org']
     # PUBLIC_SUFFIX_LIST_URL = 'http://publicsuffix.org/list/public_suffix_list.dat'
     PSL = PublicSuffixList(codecs.open(PSL_FILE_PATH, encoding='utf8'))
 
