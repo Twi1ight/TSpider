@@ -4,8 +4,6 @@
 """
 consumer
 """
-import time
-
 import redis
 from core.spider.spider import SpiderPage
 from core.utils.log import logger
@@ -44,7 +42,7 @@ class Consumer(object):
             logger.info('get task url: %s' % url)
             logger.info('%d tasks left' % self.redis.llen(self.task_queue))
             self.start_spider(url)
-            time.sleep(3)
+            # time.sleep(3)
 
     def start_spider(self, url):
         results = SpiderPage(url).spider()
