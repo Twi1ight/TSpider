@@ -5,7 +5,7 @@
 redis_task
 """
 import redis
-from settings import RedisConf
+from settings import RedisConf, MAX_URL_REQUEST_PER_SITE
 from core.utils.log import logger
 
 
@@ -35,10 +35,11 @@ class RedisUtils(object):
     def connected(self):
         return True if self.redis_task else False
 
-    def get_result(self, timeout=0):
+    def fetch_one_result(self, timeout=0):
         return self.redis_task.brpop(self.result_queue, timeout)
 
-    def get_result_amount(self):
+    @property
+    def task_counts(self):
         return self.redis_task.llen(self.result_queue)
 
     def set_url_saved(self, method, url):
@@ -102,13 +103,46 @@ class RedisUtils(object):
         else:
             self.redis_task.hsetnx(self.domain_queue, url.hostname, '*')
 
-    def create_url_task(self, url):
+    def create_url_task(self, url, set_target=True):
         """
         :param url: URL class instance
+        :param set_target: for init scan task, disabled in task result produce
         :return:
         """
+        if not self.valid_task_url(url): return
+
+        logger.info('add task: %s' % url.urlstring)
         self.redis_task.lpush(self.task_queue, url.urlstring)
+        # add targetdomain
+        if set_target: self.add_targetdomain(url)
         # set scanned hash table
         self.set_url_scanned(url)
         # incr req count
         self.incr_hostname_reqcount(url.hostname)
+
+    def valid_task_url(self, url):
+        """
+        :param url: URL class instance
+        :return:
+        """
+        # filter js img etc.
+        if not url.is_url or url.is_block_ext():
+            logger.debug('invalid url or extention')
+            return False
+
+        # filter for alicdn url:
+        # http://m.alicdn.com/home-node/4.0.18/??css/reset.css,css/common.css,css/header.css
+        if url.path.endswith('/') and url.querystring.startswith('?'):
+            logger.debug('alicdn file: %s' % url.urlstring)
+            return False
+
+        # check scanned
+        if self.is_url_scanned(url):
+            logger.debug('%s already scanned, skip' % url.urlstring)
+            return False
+
+        if self.get_hostname_reqcount(url.hostname) > MAX_URL_REQUEST_PER_SITE:
+            logger.debug('%s max req count reached!' % url.hostname)
+            return False
+
+        return True

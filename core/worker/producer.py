@@ -7,7 +7,6 @@ producer
 import json
 
 from core.utils.redis_utils import RedisUtils
-from settings import MAX_URL_REQUEST_PER_SITE
 from core.utils.mongodb import MongoUtils
 from core.utils.url import URL
 from core.utils.log import logger
@@ -44,8 +43,8 @@ class Producer(object):
             return
 
         while True:
-            _, req = self.redis_utils.get_result()
-            logger.debug('got req, %d results left' % self.redis_utils.get_result_amount())
+            _, req = self.redis_utils.fetch_one_result()
+            logger.debug('got req, %d results left' % self.redis_utils.task_counts)
             self.proc_req(req)
 
     def proc_req(self, req):
@@ -84,34 +83,12 @@ class Producer(object):
             logger.debug('%s is not target' % (url.domain if self.tld else url.hostname))
             return
 
-        # filter js img etc.
-        if url.is_block_ext():
-            logger.debug('block ext found')
-            return
-
-        # patch for alicdn url:
-        # http://m.alicdn.com/home-node/4.0.18/??css/reset.css,css/common.css,css/header.css
-        if url.path.endswith('/') and url.querystring.startswith('?'):
-            logger.debug('alicdn file: %s' % url.urlstring)
-            return
-
         # todo post req
         if method == 'POST':
             logger.debug('POST not support now')
-            return
-
-        # check scanned
-        if self.redis_utils.is_url_scanned(url):
-            logger.debug('%s already scanned, skip' % url.urlstring)
-            return
-
-        if self.redis_utils.get_hostname_reqcount(url.hostname) > MAX_URL_REQUEST_PER_SITE:
-            logger.debug('%s max req count reached!' % url.hostname)
-            return
-        # all is well
-        if method == 'GET':
-            logger.debug('add task: %s' % url.urlstring)
-            self.redis_utils.create_url_task(url)
+        elif method == 'GET':
+            # check url validation inside create_url_task
+            self.redis_utils.create_url_task(url, set_target=False)
         else:
             # todo post req
             logger.debug(data)
@@ -128,9 +105,6 @@ class Producer(object):
                 line = line.strip()
                 if not line: continue
                 url = URL(line)
-                if not url.is_url or url.is_block_ext():
-                    continue
-                self.redis_utils.add_targetdomain(url)
                 self.redis_utils.create_url_task(url)
 
 
@@ -139,7 +113,6 @@ if __name__ == '__main__':
     # no scan www.aisec.cn even got links from demo.aisc.cn
     p = Producer(tld=False)
     url = URL('http://demo.aisec.cn/demo/aisec/')
-    p.redis_utils.add_targetdomain(url)
     p.redis_utils.create_url_task(url)
     p.produce()
 

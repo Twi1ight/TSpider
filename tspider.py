@@ -62,7 +62,6 @@ if __name__ == '__main__':
             if not url.is_url or url.is_block_ext():
                 logger.error('not valid url, exit.')
                 sys.exit(-1)
-            producer.redis_utils.add_targetdomain(url)
             producer.redis_utils.create_url_task(url)
         # file object
         else:
