@@ -54,7 +54,8 @@ class URL(object):
                 return 'http://{}'.format(url)
         # //www.test.com/index.php
         if not p.scheme:
-            url = urlparse.urlunsplit(('http', p.netloc, p.path, p.query, p.params, p.fragment))
+            url = urlparse.urlunsplit(('http', p.netloc, p.path or '/',
+                                       p.query, p.params, p.fragment))
         return url
 
     @property
@@ -75,7 +76,8 @@ class URL(object):
 
     @property
     def path(self):
-        return self._p.path
+        # http://www.test.com  =>  self._p.path=''
+        return self._p.path or '/'
 
     @property
     def path_without_file(self):
@@ -132,14 +134,16 @@ class URL(object):
         stored in redis hashtable '{scheme://netloc}'
         :return:
         """
-        path_pattern = re.sub('\d+', 'd+', self._p.path)
+        path_pattern = re.sub('\d+', 'd+', self.path)
         query_params = '<>'.join(sorted(self.querydict.keys()))
         pattern = '{}?{}'.format(path_pattern, query_params) if query_params else path_pattern
         return pattern
 
     @property
-    def hashtable(self):
-        return '{}://{}'.format(self.scheme, self.netloc)
+    def scanned_table(self):
+        # return '{}://{}'.format(self.scheme, self.netloc)
+        # some sites are available with both http and https
+        return self.netloc
 
     @property
     def blocked(self):

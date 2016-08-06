@@ -74,14 +74,14 @@ class RedisUtils(object):
         :param url: URL class instance
         :return:
         """
-        self.redis_cache.hsetnx(url.hashtable, url.spider_pattern, '*')
+        self.redis_cache.hsetnx(url.scanned_table, url.spider_pattern, '*')
 
     def is_url_scanned(self, url):
         """
         :param url: URL class instance
         :return:
         """
-        return self.redis_cache.hexists(url.hashtable, url.spider_pattern)
+        return self.redis_cache.hexists(url.scanned_table, url.spider_pattern)
 
     def is_target(self, url):
         """

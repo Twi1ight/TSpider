@@ -53,7 +53,7 @@ class SpiderPage(object):
                 return 'http://{}'.format(url)
         # //www.test.com/index.php
         if not p.scheme:
-            url = urlparse.urlunsplit(('http', p.netloc, p.path, p.query, p.fragment))
+            url = urlparse.urlunsplit(('http', p.netloc, p.path or '/', p.query, p.fragment))
         return url
 
     def spider(self):
