@@ -27,16 +27,5 @@ def build_saved_cache():
         r.set_url_saved(doc['method'], url)
 
 
-def convert_scanned_cache():
-    keys = r.redis_cache.keys('http*')
-    for old_key in keys:
-        u = URL(old_key)
-        new_key = u.scanned_table
-        cached_pattern = r.redis_cache.hvals(old_key)
-        for pattern in cached_pattern:
-            r.redis_cache.hsetnx(new_key, pattern or '/', '*')
-
-
 if __name__ == '__main__':
     build_saved_cache()
-    # convert_scanned_cache()
