@@ -100,7 +100,9 @@ class URL(object):
 
     @property
     def querydict(self):
-        return dict(urlparse.parse_qsl(self._p.query, keep_blank_values=True))
+        # remove keep_blank_values=True, as url blow cause duplicate scans
+        # /Common/common/captcha?0.610851539997384 => querydict = {'0.610851539997384': ''}
+        return dict(urlparse.parse_qsl(self._p.query))
 
     @property
     def fragment(self):
