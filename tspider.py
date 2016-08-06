@@ -59,7 +59,7 @@ if __name__ == '__main__':
         if isinstance(target, basestring):
 
             url = URL(target)
-            if not url.is_url or url.is_block_ext():
+            if not url.valid or url.blocked:
                 logger.error('not valid url, exit.')
                 sys.exit(-1)
             producer.redis_utils.create_url_task(url)

@@ -126,7 +126,7 @@ class RedisUtils(object):
         :return:
         """
         # filter js img etc.
-        if not url.is_url or url.is_block_ext():
+        if not url.is_url or url.blocked:
             logger.debug('invalid url or extention')
             return False
 

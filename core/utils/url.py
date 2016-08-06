@@ -22,15 +22,15 @@ class URL(object):
                 'tiff', 'tpl', 'uff', 'wav', 'wma', 'wmv', 'doc', 'docx', 'db', 'jpg', 'png',
                 'bmp', 'svg', 'gif', 'jpeg', 'css', 'js', 'cur', 'ico', 'zip', 'txt', 'apk',
                 'dmg']
-
+    BLOCKHOST = ['mirrors.aliyun.com']
     # PUBLIC_SUFFIX_LIST_URL = 'http://publicsuffix.org/list/public_suffix_list.dat'
     PSL = PublicSuffixList(codecs.open(PSL_FILE_PATH, encoding='utf8'))
 
     def __init__(self, url):
-        self.is_url = True
+        self.valid = True
         self.urlstring = self.normalize_url(url)
         if not self.urlstring:
-            self.is_url = False
+            self.valid = False
         self._p = urlparse.urlparse(self.urlstring)
 
     @staticmethod
@@ -139,8 +139,9 @@ class URL(object):
     def hashtable(self):
         return '{}://{}'.format(self.scheme, self.netloc)
 
-    def is_block_ext(self):
-        return True if self.extension in URL.BLOCKEXT else False
+    @property
+    def blocked(self):
+        return True if self.extension in URL.BLOCKEXT or self.hostname in URL.BLOCKHOST else False
 
 
 if __name__ == '__main__':
