@@ -57,12 +57,37 @@ class RedisUtils(object):
     def connected(self):
         return True if self.redis_task else False
 
+    def fetch_one_task(self, timeout=0):
+        """
+        :param timeout: default 0, block mode
+        :return:
+        """
+        _, url = self.redis_task.brpop(self.l_url_task, timeout)
+        return url
+
     def fetch_one_result(self, timeout=0):
+        """
+        :param timeout: default 0, block mode
+        :return:
+        """
         return self.redis_task.brpop(self.l_url_result, timeout)
 
     @property
-    def task_counts(self):
+    def result_counts(self):
+        """
+        :return: The total number of left results
+        """
         return self.redis_task.llen(self.l_url_result)
+
+    @property
+    def task_counts(self):
+        """
+        :return: The total number of left tasks
+        """
+        return self.redis_task.llen(self.l_url_task)
+
+    def insert_result(self, result):
+        self.redis_task.lpush(self.l_url_result, result)
 
     def set_url_saved(self, method, url):
         """

@@ -4,50 +4,36 @@
 """
 consumer
 """
-import redis
 from core.spider.spider import SpiderPage
 from core.utils.log import logger
-from settings import RedisConf
-
-
-# r = redis.StrictRedis(host=Redis.host, port=Redis.port,
-#                       db=Redis.db, password=Redis.password)
-# r.lpush()
+from core.utils.redis_utils import RedisUtils
 
 
 class Consumer(object):
-    def __init__(self, redis_db=0, task_queue='spider:task', result_queue='spider:result'):
+    def __init__(self, **kwargs):
         """
-        :param task_queue:
-        :param result_queue:
+        :param redis_db: redis db index. N for task queue and N+1 for cache.
         :return:
         """
-        self.redis = redis.StrictRedis(host=RedisConf.host, port=RedisConf.port,
-                                       db=redis_db, password=RedisConf.password)
-        self.task_queue = task_queue
-        self.result_queue = result_queue
-        try:
-            self.redis.ping()
-        except:
-            logger.exception('connect to redis failed!')
-            self.redis = None
+        kwargs.setdefault('redis_db', 0)
+        self.redis_utils = RedisUtils(**kwargs)
 
     def consume(self):
-        if not self.redis:
-            logger.error('no redis connection found! exit.')
+        if not self.redis_utils.connected:
+            logger.error('no redis connection found in consumer! exit.')
             return
 
         while True:
-            _, url = self.redis.brpop(self.task_queue, 0)
+            url = self.redis_utils.fetch_one_task()
             logger.info('get task url: %s' % url)
-            logger.info('%d tasks left' % self.redis.llen(self.task_queue))
+            logger.info('%d tasks left' % self.redis_utils.task_counts)
             self.start_spider(url)
             # time.sleep(3)
 
     def start_spider(self, url):
         results = SpiderPage(url).spider()
         for _ in results:
-            self.redis.lpush(self.result_queue, _)
+            self.redis_utils.insert_result(_)
 
 
 if __name__ == '__main__':

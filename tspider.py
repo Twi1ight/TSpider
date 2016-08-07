@@ -50,7 +50,7 @@ if __name__ == '__main__':
     producer_pool = []
     consumer_pool = []
     for _ in range(arg.consumer):
-        proc = Process(name='consumer-%d' % _, target=Consumer().consume)
+        proc = Process(name='consumer-%d' % _, target=Consumer(redis_db=arg.redis_db).consume)
         proc.start()
         consumer_pool.append(proc)
     for _ in range(arg.producer):

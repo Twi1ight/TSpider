@@ -50,7 +50,7 @@ class Producer(object):
 
         while True:
             _, req = self.redis_utils.fetch_one_result()
-            logger.debug('got req, %d results left' % self.redis_utils.task_counts)
+            logger.debug('got req, %d results left' % self.redis_utils.result_counts)
             self.proc_req(req)
 
     def proc_req(self, req):
