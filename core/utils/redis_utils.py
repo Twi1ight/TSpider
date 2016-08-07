@@ -150,13 +150,14 @@ class RedisUtils(object):
         else:
             self.redis_task.hsetnx(self.h_domain_whitelist, url.hostname, '*')
 
-    def create_url_task(self, url, set_target=True):
+    def create_url_task(self, url, set_target=True, valid_url_check=True):
         """
         :param url: URL class instance
+        :param valid_url_check: disable valid task url check when re-create task during add blackdomain in runtime
         :param set_target: for init scan task, disabled in task result produce
         :return:
         """
-        if not self.valid_task_url(url): return
+        if valid_url_check and not self.valid_task_url(url): return
 
         logger.info('add task: %s' % url.urlstring)
         self.redis_task.lpush(self.l_url_task, url.urlstring)
