@@ -19,25 +19,31 @@ class Producer(object):
     store results to mongodb
     """
 
-    def __init__(self, redis_db=0, task_queue='spider:task', result_queue='spider:result',
-                 domain_queue='spider:targetdomain', reqcount_queue='spider:reqcount',
-                 saved_queue='spider:saved', tld=True):
-        """
-        :param redis_db:
-        :param task_queue:
-        :param result_queue:
-        :param domain_queue:
-        :param reqcount_queue:
+    def __init__(self, **kwargs):
+        """Constructs
         :param tld: scan same top-level-domain subdomains. Scan only subdomain itself when tld=False
-        :return:
+        :param mongo_db: mongodb database name.
+        :param redis_db: redis db index.
+        :param l_url_task: (optional) redis list, which spider get urls
+        :param l_url_result: (optional) redis list, which spider send result urls
+        :param h_url_saved: (optional) redis hash table, key named by {method}-{url_pattern}, values make no sense
+        :param h_domain_whitelist: (optional) redis hash table, domain/hostname in hkeys is allowed to scrap
+        :param h_domain_blacklist: (optional) redis hash table, domain/subdomain in hkeys is not allowed to scrap
+        :param h_hostname_reqcount: (optional) redis hash table, key named by hostname, url scrapped count in value
+        :return: :class:Producer object
+        :rtype: Producer
         """
-        self.redis_utils = RedisUtils(redis_db, task_queue, result_queue, domain_queue,
-                                      reqcount_queue, saved_queue, tld)
-        self.tld = tld
+        kwargs.setdefault('tld', True)
+        kwargs.setdefault('redis_db', 0)
+
+        self.tld = kwargs.get('tld')
+        self.mongo_db = kwargs.pop('mongo_db', 'tspider')
+
+        self.redis_utils = RedisUtils(**kwargs)
 
     def produce(self):
         # mongodb with multipleprocessing must be init after fork
-        self.mongodb = MongoUtils()
+        self.mongodb = MongoUtils(database=self.mongo_db)
         if not self.redis_utils.connected or not self.mongodb.connected:
             logger.error('no redis/mongodb connection found! exit.')
             return

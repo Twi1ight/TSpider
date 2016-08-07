@@ -21,18 +21,23 @@ def cmdparse():
                                      description='A web spider',
                                      version=VERSION)
     parser.add_argument('-u', '--url', dest='url',
-                        help='target url, if no tld, only urls in this subdomain')
+                        help='Target url, if no tld, only urls in this subdomain')
     parser.add_argument('-f', '--file', dest='file', type=open,
-                        help='load target from file')
+                        help='Load target from file')
     parser.add_argument('--tld', action='store_true', dest='tld',
-                        help='spider all subdomains')
+                        help='Spider all subdomains')
     parser.add_argument('--continue', dest='keepon', action='store_true',
-                        help='continue last task, no init target [-u|-f] need')
-    worker = parser.add_argument_group(title='Worker', description='opionts for worker')
+                        help='Continue last task, no init target [-u|-f] need')
+    worker = parser.add_argument_group(title='Worker', description='options for worker')
     worker.add_argument('-c', '--consumer', metavar='N', type=int, default=1, dest='consumer',
-                        help='consumers to run')
+                        help='Max number of consumer processes to run')
     worker.add_argument('-p', '--producer', metavar='N', type=int, default=1, dest='producer',
-                        help='producers to run')
+                        help='Max number of producer processes to run')
+    db = parser.add_argument_group(title='Database', description='options for redis and mongodb')
+    db.add_argument('--mongo-db', metavar='STRING', dest='mongo_db', default='tspider',
+                    help='Mongodb database name')
+    db.add_argument('--redis-db', metavar='NUMBER', dest='redis_db', type=int, default=0,
+                    help='Redis db index, N for task queue and N+1 for cache')
     arg = parser.parse_args()
     if not any([arg.url, arg.file, arg.keepon]):
         parser.exit(parser.format_help())
@@ -49,13 +54,14 @@ if __name__ == '__main__':
         proc.start()
         consumer_pool.append(proc)
     for _ in range(arg.producer):
-        proc = Process(name='producer-%d' % _, target=Producer(tld=tld_enable).produce)
+        worker = Producer(tld=tld_enable, mongo_db=arg.mongo_db, redis_db=arg.redis_db).produce
+        proc = Process(name='producer-%d' % _, target=worker)
         proc.start()
         producer_pool.append(proc)
 
     if not arg.keepon:
         target = arg.url or arg.file
-        producer = Producer(tld=tld_enable)
+        producer = Producer(tld=tld_enable, mong_db=arg.mongo_db, redis_db=arg.redis_db)
         if isinstance(target, basestring):
 
             url = URL(target)
