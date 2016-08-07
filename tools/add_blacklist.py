@@ -15,6 +15,7 @@ urls = []
 
 
 def remove_from_tasklist(domain):
+    # todo change to SIGNAL STRING in loop
     while True:
         try:
             urlstring = r.fetch_one_task(timeout=3)
