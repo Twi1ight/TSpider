@@ -5,6 +5,7 @@
  *  casperjs --ignore-ssl-errors=true --ssl-protocol=any casper_crawler.js http://foo.bar outfile
  */
 'use strict';
+var user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11"
 var core = require('./core');
 var utils = require('utils');
 var result_file, requested_count = 0, static_urls = [], requested_urls = [];
@@ -18,10 +19,9 @@ var casper = require('casper').create({
     pageSettings: {
         loadImages: false,        // The WebPage instance used by Casper will
         loadPlugins: false,         // use these settings
-        userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11"
-
+        userAgent: user_agent
     },
-    logLevel: "debug",               // Only "info" level messages will be logged
+    logLevel: "info",               // Only "info" level messages will be logged
     verbose: false                   // log messages will be printed out to the console
 });
 
@@ -57,9 +57,12 @@ casper.on('resource.requested', function (requestData, request) {
 });
 
 // hook window.open
-casper.on('popup.created', function (newpage) {
+casper.on('popup.created', function (popup) {
     this.echo("url popup created", "INFO");
-    newpage.onResourceRequested = function (requestData, request) {
+    // casperjs setting user-agent not working in popups
+    // https://github.com/casperjs/casperjs/issues/1662
+    popup.settings.userAgent = user_agent;
+    popup.onResourceRequested = function (requestData, request) {
         requested_count++;
         requested_urls.push(JSON.stringify(requestData));
         casper.echo('popup onResourceRequested: ' + requestData.url, 'INFO');
