@@ -8,7 +8,8 @@
 var user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11"
 var core = require('./core');
 var utils = require('utils');
-var result_file, requested_count = 0, static_urls = [], requested_urls = [];
+var fs = require('fs');
+var init_url, result_file, cookie_file, requested_count = 0, static_urls = [], requested_urls = [];
 var casper = require('casper').create({
     //clientScripts: [
     //    'jquery-2.2.4.min.js'      // These two scripts will be injected in remote
@@ -25,14 +26,22 @@ var casper = require('casper').create({
     verbose: false                   // log messages will be printed out to the console
 });
 
-if (casper.cli.has(0)) {
-    var init_url = casper.cli.get(0);
-    if (casper.cli.has(1)) {
-        result_file = casper.cli.get(1)
+
+if (casper.cli.has('url')) {
+    init_url = casper.cli.get('url');
+    if (casper.cli.has('output-file')) {
+        result_file = casper.cli.get('output-file')
+    }
+    if (casper.cli.has('cookie-file')) {
+        cookie_file = casper.cli.get('cookie-file')
     }
 } else {
-    console.log('usage: crawler.js url [outfile]');
+    console.log('usage: crawler.js --url http://foo.bar [--output-file output.txt] [--cookie-file cookie.txt]');
     casper.exit()
+}
+
+if (!!cookie_file) {
+    core.loadCookie(cookie_file)
 }
 
 //page.resource.requested   //Emitted when a new HTTP request is performed to open the required url.

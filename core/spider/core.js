@@ -3,7 +3,23 @@
  */
 var require = patchRequire(require);
 var utils = require('utils');
+var casper = require('casper');
 var fs = require('fs');
+
+exports.loadCookie = function (filename) {
+    if (fs.exists(filename)) {
+        var content = fs.read(filename);
+        cookies = JSON.parse(content);
+        cookies.forEach(function (cookie) {
+            //console.log(JSON.stringify(cookie));
+            var ret = phantom.addCookie(cookie);
+            //console.log(ret)
+        });
+    } else {
+        casper.echo('no cookie.txt found!', 'ERROR');
+        casper.exit()
+    }
+};
 
 exports.evilResource = function (url) {
     "use strict";
