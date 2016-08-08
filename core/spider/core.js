@@ -334,7 +334,7 @@ exports.FireintheHole = function () {
                 sleep(50);
                 getStaticUrls();
                 getEvents();
-                getForms()
+                //getForms()
             } catch (exception) {
                 console.log('fireEvent exception:' + exception)
             }

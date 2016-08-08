@@ -82,7 +82,6 @@ class SpiderPage(object):
                     os.waitpid(-1, os.WNOHANG)
                     logger.error('casperjs execution timeout. killed.')
                     break
-            logger.debug('casperjs return code %d' % proc.returncode)
         except:
             logger.exception('casperjs execution failed!')
 
