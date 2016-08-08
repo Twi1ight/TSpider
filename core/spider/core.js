@@ -52,18 +52,29 @@ exports.FireintheHole = function () {
     "use strict";
     var urls = [];
     //var retvar = [];
+    var events = [];
+    var events_func_str = [];
+    var filled_inputs = [];
+    var submited_forms = [];
 
     function fillInputs() {
         var inputs = document.getElementsByTagName('input');
-        console.log('get all inputs length: ' + inputs.length);
+        //console.log('get ' + inputs.length + ' inputs total');
         //var requestdata = {};
         var buttons = [];
         for (var j = 0; j < inputs.length; j++) {
             var obj = inputs[j];
-            console.log(obj.name + ' ' + obj.type + ' ' + obj.id + ' ' + obj.value);
             if (!obj.hasAttribute('type')) {
                 continue
             }
+            // check if filled
+            var pattern = obj.name + '|' + obj.type + '|' + obj.id;
+            if (filled_inputs.indexOf(pattern) >= 0) {
+                continue
+            }
+            filled_inputs.push(pattern);
+
+            console.log('input => name: "' + obj.name + '" type: ' + obj.type + '" id: ' + obj.id);
             switch (obj.type) {
                 //case 'hidden':
                 case 'submit':
@@ -110,10 +121,20 @@ exports.FireintheHole = function () {
             }
             obj.value = value;
         }
-        //click all buttons
-        //for (var i = 0; i < buttons.length; i++) {
-        //    buttons[i].click()
-        //}
+
+        var selects = document.getElementsByTagName('select');
+        for (var k = 0; k < selects.length; k++) {
+            var s = selects[k];
+            // check if filled
+            var spattern = s.name + '|' + s.type + '|' + s.id;
+            if (filled_inputs.indexOf(spattern) >= 0) {
+                continue
+            }
+            filled_inputs.push(spattern);
+            console.log('input => name: "' + s.name + '" type: ' + s.type + '" id: ' + s.id);
+            s.selectedIndex = 1;
+        }
+
         return buttons
     }
 
@@ -121,10 +142,17 @@ exports.FireintheHole = function () {
         var buttons = fillInputs();
         var f = document.forms;
         for (var i = 0; i < f.length; i++) {
-            console.log('form ' + i + ' total:' + f.length);
+            console.log('form-' + (i + 1) + ' total: ' + f.length);
             var form = f[i];
+            var action = form.action ? form.action : form.baseURI;
+            var pattern = form.name + '|' + action;
+            if (submited_forms.indexOf(pattern) >= 0) {
+                //console.log('already submitted');
+                continue
+            }
+            submited_forms.push(pattern);
             var inputs = form.getElementsByTagName('input');
-            console.log('get form inputs length: ' + inputs.length);
+            console.log('get ' + inputs.length + ' inputs from form-' + (i + 1));
             var formdata = {};
             for (var j = 0; j < inputs.length; j++) {
                 var obj = inputs[j];
@@ -138,7 +166,6 @@ exports.FireintheHole = function () {
             }
             var querystring = param(formdata);
             if (querystring) {
-                var action = form.action ? form.action : form.baseURI;
                 var request = form.method.toUpperCase() + '|||' + rmFragment(action) + '|||' + querystring + '|||' + rmFragment(form.baseURI);
                 if (urls.indexOf(request) < 0) {
                     urls.push(request);
@@ -154,8 +181,6 @@ exports.FireintheHole = function () {
     }
 
     function getEvents() {
-        var events = [];
-        var events_func_str = [];
         var allElements, len;
         allElements = document.getElementsByTagName('*');
         len = allElements.length;// allElements will change,len will change
@@ -164,8 +189,9 @@ exports.FireintheHole = function () {
             if (allElements[i].href) {
                 var jscode = allElements[i].href.match("javascript:(.*)");
                 if (jscode) {
-                    if (events.indexOf(jscode[0]) < 0) {
+                    if (events_func_str.indexOf(jscode[0]) < 0) {
                         events.push(jscode[0]);
+                        events_func_str.push(jscode[0]);
                     }
                 }
             }
@@ -174,44 +200,30 @@ exports.FireintheHole = function () {
             for (var j = 0; j < attrs.length; j++) {
                 if (typeof allElements[i].onclick === 'function') {
                     func_str = String(allElements[i].onclick);
+                    //console.log('onclick   ' + func_str + '    ' + events.indexOf(func_str));
                     if (events_func_str.indexOf(func_str) < 0) {
+                        //console.log('onclick   ' + func_str);
                         events.push(allElements[i]);
+                        events_func_str.push(func_str);
                     }
                 } else {
                     // todo ugly hack events here, trigger event like onclick
                     var name = attrs[j].name;
                     var value = allElements[i][name];
                     if (startsWith(name, 'on') && typeof(value) === 'function') {
-                        console.log(name + '   ' + value + '    ' + events.indexOf(value));
+                        //console.log(name + '   ' + value + '    ' + events.indexOf(value));
                         func_str = String(value);
                         if (events_func_str.indexOf(func_str) < 0) {
-                            events.push(value)
+                            //console.log(name + '   ' + value);
+                            events.push(value);
+                            events_func_str.push(func_str);
                         }
                     }
                 }
             }
         }
-        for (var k = 0; k < events.length; k++) {
-            try {
-                if (typeof events[k] === 'string') {
-                    eval(events[k]);
-                } else if (typeof events[k] === 'object') {
-                    events[k].click();
-                } else if (typeof events[k] === 'function') {
-                    console.log(events[k]);
-                    events[k]();
-                } else {
-                    continue
-                }
-                //setTimeout(function () {
-                //    getStaticUrls()
-                //}, 1000);
-                sleep(500);
-                getStaticUrls();
-            } catch (exception) {
-                console.log('getEvents exception:' + exception)
-            }
-        }
+        console.log('got ' + events.length + ' events');
+        //console.log(events);
     }
 
     function handleTag(tag, src) {
@@ -290,20 +302,75 @@ exports.FireintheHole = function () {
         }
     }
 
-    try {
-        getStaticUrls();
-    } catch (exception) {
-        console.log('getStaticUrls ' + exception)
+    function mainWork() {
+        try {
+            getStaticUrls();
+        } catch (exception) {
+            console.log('getStaticUrls ' + exception)
+        }
+        try {
+            getEvents();
+        } catch (exception) {
+            console.log('getEvents ' + exception)
+        }
+        try {
+            getForms();
+        } catch (exception) {
+            console.log('getForms ' + exception)
+        }
     }
-    try {
-        getEvents();
-    } catch (exception) {
-        console.log('getEvents ' + exception)
+
+    function fireEvent() {
+        while (events.length > 0) {
+            var event = events.shift();
+            try {
+                if (typeof event === 'string') {
+                    eval(event);
+                } else if (typeof event === 'object') {
+                    event.click();
+                } else if (typeof event === 'function') {
+                    event();
+                }
+                sleep(50);
+                getStaticUrls();
+                getEvents();
+                getForms()
+            } catch (exception) {
+                console.log('fireEvent exception:' + exception)
+            }
+        }
     }
-    try {
-        getForms();
-    } catch (exception) {
-        console.log('getForms ' + exception)
-    }
+
+    // todo find out the incomplete loop bug
+    //function main() {
+    //    if (events.length > 0) {
+    //        console.log(events.length);
+    //        try {
+    //            getEvents();
+    //            getStaticUrls();
+    //            var event = events.shift();
+    //            if (typeof event === 'string') {
+    //                eval(event);
+    //            } else if (typeof event === 'object') {
+    //                event.click();
+    //            } else if (typeof event === 'function') {
+    //                event();
+    //            }
+    //
+    //        } catch (exception) {
+    //            console.log('fireEvent exception:' + exception)
+    //        }
+    //        setTimeout(function () {
+    //            main()
+    //        }, 500)
+    //    }
+    //}
+    //
+    //work();
+    //main();
+
+
+    mainWork();
+    fireEvent();
     return urls;
 };

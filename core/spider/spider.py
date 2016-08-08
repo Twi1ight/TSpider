@@ -3,15 +3,18 @@
 """
 Created on 2016/7/27 23:26
 """
+import os
 import json
 import subprocess
 import sys
 import urlparse
 import uuid
+import signal
+import time
 
-import os
+from datetime import datetime
 from core.utils.log import logger
-from settings import SPIDER_PATH, TMPDIR_PATH
+from settings import SPIDER_PATH, TMPDIR_PATH, CASPERJS_TIMEOUT
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -69,12 +72,19 @@ class SpiderPage(object):
         command = 'casperjs --ignore-ssl-errors=true --ssl-protocol=any ' \
                   '{cmd} "{url}" "{file}"'.format(cmd=crawler_file, url=self._url, file=spiderfile)
         try:
-            returncode = subprocess.check_call(command, shell=True)
-            logger.debug('casperjs succeed, return code %d' % returncode)
-        except subprocess.CalledProcessError as e:
-            logger.error('casperjs failed, return code: %d' % e.returncode)
+            proc = subprocess.Popen(command, shell=True)
+            start = datetime.now()
+            while proc.poll() is None:
+                time.sleep(1)
+                now = datetime.now()
+                if (now - start).seconds > CASPERJS_TIMEOUT:
+                    os.kill(proc.pid, signal.SIGKILL)
+                    os.waitpid(-1, os.WNOHANG)
+                    logger.error('casperjs execution timeout. killed.')
+                    break
+            logger.debug('casperjs return code %d' % proc.returncode)
         except:
-            logger.exception('subprocess failed!')
+            logger.exception('casperjs execution failed!')
 
         if not os.path.exists(spiderfile):
             logger.error('no spider result file found!')

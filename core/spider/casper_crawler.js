@@ -85,13 +85,11 @@ casper.on('exit', function () {
 
 casper.start(init_url);
 
-casper.userAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X)');
-
 casper.then(function () {
     var urls = [];
     var iframe_count = this.page.childFramesCount();
     console.log('find ' + iframe_count + ' iframes');
-    var max_frames = iframe_count < 10 ? iframe_count : 10;
+    var max_frames = iframe_count < 100 ? iframe_count : 100;
     for (var index = 0; index < max_frames; index++) {
         this.withFrame(index, function () {
             urls = this.evaluate(core.FireintheHole);
@@ -104,7 +102,7 @@ casper.then(function () {
     }
 });
 
-casper.then(function () {
+casper.wait(1000, function () {
     var urls = [];
     console.log('mainframe evaluate');
     urls = this.evaluate(core.FireintheHole);
@@ -116,7 +114,8 @@ casper.then(function () {
     }
 });
 
-casper.then(function () {
+casper.wait(1000, function () {
+    console.log('wait for mainframe ends');
     console.log('requested count ' + requested_count);
 });
 
