@@ -27,21 +27,33 @@ var casper = require('casper').create({
 });
 
 
-if (casper.cli.has('url')) {
-    init_url = casper.cli.get('url');
+if (casper.cli.args.length === 1) {
+    init_url = casper.cli.get(0);
     if (casper.cli.has('output-file')) {
-        result_file = casper.cli.get('output-file')
+        result_file = casper.cli.get('output-file');
+        console.log(result_file)
     }
     if (casper.cli.has('cookie-file')) {
         cookie_file = casper.cli.get('cookie-file')
     }
 } else {
-    console.log('usage: crawler.js --url http://foo.bar [--output-file output.txt] [--cookie-file cookie.txt]');
+    console.log('usage: crawler.js http://foo.bar [--output-file=output.txt] [--cookie-file=cookie.txt]');
     casper.exit()
 }
 
 if (!!cookie_file) {
-    core.loadCookie(cookie_file)
+    if (fs.exists(cookie_file)) {
+        var content = fs.read(cookie_file);
+        cookies = JSON.parse(content);
+        cookies.forEach(function (cookie) {
+            //console.log(JSON.stringify(cookie));
+            var ret = phantom.addCookie(cookie);
+            //console.log(ret)
+        });
+    } else {
+        casper.echo('cookie file ' + filename + 'not found!', 'ERROR');
+        casper.exit();
+    }
 }
 
 //page.resource.requested   //Emitted when a new HTTP request is performed to open the required url.
@@ -89,7 +101,7 @@ casper.on('remote.message', function (msg) {
 });
 
 casper.on('exit', function () {
-    if (result_file) {
+    if (!!result_file) {
         this.echo('save urls to ' + result_file, 'INFO');
     }
     core.saveFile(static_urls, requested_urls, result_file)

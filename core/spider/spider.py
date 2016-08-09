@@ -24,8 +24,7 @@ class SpiderPage(object):
     """
     Spider Page
     """
-
-    def __init__(self, url, outfile=None):
+    def __init__(self, url, outfile=None, cookie_file=None):
         """
         :param url:
         :param outfile:
@@ -33,6 +32,7 @@ class SpiderPage(object):
         """
         self._url = self.normalize_url(url)
         self._outfile = outfile
+        self._cookie_file = cookie_file
         self._results = []
 
     @staticmethod
@@ -70,7 +70,8 @@ class SpiderPage(object):
         spiderfile = os.path.join(TMPDIR_PATH, uuid.uuid4().hex)
         crawler_file = os.path.join(SPIDER_PATH, 'casper_crawler.js')
         command = 'casperjs --ignore-ssl-errors=true --ssl-protocol=any ' \
-                  '{cmd} "{url}" "{file}"'.format(cmd=crawler_file, url=self._url, file=spiderfile)
+                  '{cmd} "{url}" --output-file="{file}"'.format(cmd=crawler_file, url=self._url, file=spiderfile)
+        if self._cookie_file: command += ' --cookie-file {0}'.format(self._cookie_file)
         try:
             proc = subprocess.Popen(command, shell=True)
             start = datetime.now()

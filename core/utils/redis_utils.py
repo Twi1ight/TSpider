@@ -183,7 +183,7 @@ class RedisUtils(object):
         if url.path.endswith('/') and url.querystring.startswith('?'):
             logger.debug('alicdn file: %s' % url.urlstring)
             return False
-
+        # todo skip logout url
         # check scanned
         if self.is_url_scanned(url):
             logger.debug('%s already scanned, skip' % url.urlstring)

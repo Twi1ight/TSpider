@@ -3,23 +3,7 @@
  */
 var require = patchRequire(require);
 var utils = require('utils');
-var casper = require('casper');
 var fs = require('fs');
-
-exports.loadCookie = function (filename) {
-    if (fs.exists(filename)) {
-        var content = fs.read(filename);
-        cookies = JSON.parse(content);
-        cookies.forEach(function (cookie) {
-            //console.log(JSON.stringify(cookie));
-            var ret = phantom.addCookie(cookie);
-            //console.log(ret)
-        });
-    } else {
-        casper.echo('no cookie.txt found!', 'ERROR');
-        casper.exit()
-    }
-};
 
 exports.evilResource = function (url) {
     "use strict";
@@ -191,12 +175,14 @@ exports.FireintheHole = function () {
             form.submit();
         }
         //click all buttons
+        //todo skip logout button
         for (i = 0; i < buttons.length; i++) {
             buttons[i].click()
         }
     }
 
     function getEvents() {
+        //todo skip logout button
         var allElements, len;
         allElements = document.getElementsByTagName('*');
         len = allElements.length;// allElements will change,len will change
