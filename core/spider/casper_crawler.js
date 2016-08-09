@@ -22,8 +22,8 @@ var casper = require('casper').create({
         loadPlugins: false,         // use these settings
         userAgent: user_agent
     },
-    logLevel: "info",               // Only "info" level messages will be logged
-    verbose: false                   // log messages will be printed out to the console
+    logLevel: "debug",               // Only "info" level messages will be logged
+    verbose: true                   // log messages will be printed out to the console
 });
 
 
@@ -31,7 +31,6 @@ if (casper.cli.args.length === 1) {
     init_url = casper.cli.get(0);
     if (casper.cli.has('output-file')) {
         result_file = casper.cli.get('output-file');
-        console.log(result_file)
     }
     if (casper.cli.has('cookie-file')) {
         cookie_file = casper.cli.get('cookie-file')
@@ -42,17 +41,21 @@ if (casper.cli.args.length === 1) {
 }
 
 if (!!cookie_file) {
-    if (fs.exists(cookie_file)) {
-        var content = fs.read(cookie_file);
-        cookies = JSON.parse(content);
-        cookies.forEach(function (cookie) {
-            //console.log(JSON.stringify(cookie));
-            var ret = phantom.addCookie(cookie);
-            //console.log(ret)
-        });
-    } else {
-        casper.echo('cookie file ' + filename + 'not found!', 'ERROR');
-        casper.exit();
+    try {
+        if (fs.exists(cookie_file)) {
+            var content = fs.read(cookie_file);
+            var cookies = JSON.parse(content);
+            cookies.forEach(function (cookie) {
+                //console.log(JSON.stringify(cookie));
+                var ret = phantom.addCookie(cookie);
+                //console.log(ret)
+            });
+        } else {
+            casper.echo('cookie file ' + filename + 'not found!', 'ERROR');
+            casper.exit();
+        }
+    } catch (exception) {
+        casper.echo(exception, 'ERROR')
     }
 }
 
