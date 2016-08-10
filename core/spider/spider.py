@@ -71,7 +71,7 @@ class SpiderPage(object):
         crawler_file = os.path.join(SPIDER_PATH, 'casper_crawler.js')
         command = 'casperjs --ignore-ssl-errors=true --ssl-protocol=any ' \
                   '{cmd} "{url}" --output-file="{file}"'.format(cmd=crawler_file, url=self._url, file=spiderfile)
-        if self._cookie_file: command += ' --cookie-file {0}'.format(self._cookie_file)
+        if self._cookie_file: command += ' --cookie-file={0}'.format(self._cookie_file)
         try:
             proc = subprocess.Popen(command, shell=True)
             start = datetime.now()
