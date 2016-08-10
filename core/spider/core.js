@@ -56,7 +56,7 @@ exports.FireintheHole = function () {
     var events_func_str = [];
     var filled_inputs = [];
     var submited_forms = [];
-
+    var logout_text = ['logout', 'quit', '注销', '退出', '注销登录', '退出登录', '安全注销', '安全退出'];
     function fillInputs() {
         var inputs = document.getElementsByTagName('input');
         //console.log('get ' + inputs.length + ' inputs total');
@@ -175,18 +175,23 @@ exports.FireintheHole = function () {
             form.submit();
         }
         //click all buttons
-        //todo skip logout button
         for (i = 0; i < buttons.length; i++) {
+            if (logout_text.indexOf(buttons[i].innerText)) {
+                continue
+            }
             buttons[i].click()
         }
     }
 
     function getEvents() {
-        //todo skip logout button
         var allElements, len;
         allElements = document.getElementsByTagName('*');
         len = allElements.length;// allElements will change,len will change
         for (var i = 0; i < len; i++) {
+            //skip logout element
+            if(logout_text.indexOf(allElements[i].innerText)){
+                continue
+            }
             //js_code
             if (allElements[i].href) {
                 //todo javascript:; javascript:void(0) javascript:void(0);  onclick()
@@ -232,6 +237,10 @@ exports.FireintheHole = function () {
     function handleTag(tag, src) {
         var elements = document.getElementsByTagName(tag);
         for (var i = 0; i < elements.length; i++) {
+            //skip logout url
+            if(logout_text.indexOf(elements[i].innerText)){
+                continue
+            }
             var method, referer, url, request;
             method = 'GET';
             referer = window.location.href;

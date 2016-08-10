@@ -183,7 +183,6 @@ class RedisUtils(object):
         if url.path.endswith('/') and url.querystring.startswith('?'):
             logger.debug('alicdn file: %s' % url.urlstring)
             return False
-        # todo skip logout url
         # check scanned
         if self.is_url_scanned(url):
             logger.debug('%s already scanned, skip' % url.urlstring)
@@ -226,9 +225,3 @@ class RedisUtils(object):
         :return:
         """
         self.redis_task.hsetnx(self.h_domain_blacklist, domain, '*')
-
-    def is_logout_url(self, url):
-        """
-        :param url: URL class instance
-        :return:
-        """

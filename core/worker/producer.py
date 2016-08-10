@@ -108,9 +108,9 @@ class Producer(object):
             # check url validation inside create_url_task
             self.redis_utils.create_url_task(url, set_target=False)
         else:
-            # todo post req
+            # not GET nor POST
+            logger.error('HTTP Verb %s found!' % method)
             logger.debug(data)
-            pass
 
     def create_file_task(self, fileobj):
         """
