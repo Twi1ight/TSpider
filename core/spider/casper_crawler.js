@@ -48,7 +48,9 @@ if (!!cookie_file) {
             cookies.forEach(function (cookie) {
                 //console.log(JSON.stringify(cookie));
                 var ret = phantom.addCookie(cookie);
-                casper.echo(ret + ' -- ' + JSON.stringify(cookie), 'DEBUG')
+                if (ret === false) {
+                    casper.echo('addCookie failed: ' + JSON.stringify(cookie), 'INFO')
+                }
             });
         } else {
             casper.echo('cookie file ' + filename + 'not found!', 'ERROR');
