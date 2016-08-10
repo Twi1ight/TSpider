@@ -142,6 +142,7 @@ exports.FireintheHole = function () {
     function getForms() {
         var buttons = fillInputs();
         var f = document.forms;
+        console.log('got total: ' + f.length + ' forms');
         for (var i = 0; i < f.length; i++) {
             console.log('form-' + (i + 1) + ' total: ' + f.length);
             var form = f[i];
@@ -247,7 +248,7 @@ exports.FireintheHole = function () {
         var elements = document.getElementsByTagName(tag);
         for (var i = 0; i < elements.length; i++) {
             //skip logout url
-            if (logout_text.indexOf(elements[i].innerText)) {
+            if (logout_text.indexOf(elements[i].innerText) >= 0) {
                 continue
             }
             var method, referer, url, request;
