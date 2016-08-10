@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
     if not arg.keepon:
         target = arg.url or arg.file
-        producer = Producer(tld=tld_enable, mong_db=arg.mongo_db, redis_db=arg.redis_db)
+        producer = Producer(tld=tld_enable, mongo_db=arg.mongo_db, redis_db=arg.redis_db)
         if isinstance(target, basestring):
 
             url = URL(target)
