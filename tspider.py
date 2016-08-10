@@ -24,6 +24,8 @@ def cmdparse():
                         help='Target url, if no tld, only urls in this subdomain')
     parser.add_argument('-f', '--file', dest='file', type=open,
                         help='Load target from file')
+    parser.add_argument('--cookie-file', dest='cookie_file', metavar='FILE',
+                        help='Cookie file from chrome export by EditThisCookie')
     parser.add_argument('--tld', action='store_true', dest='tld',
                         help='Spider all subdomains')
     parser.add_argument('--continue', dest='keepon', action='store_true',
@@ -50,7 +52,8 @@ if __name__ == '__main__':
     producer_pool = []
     consumer_pool = []
     for _ in range(arg.consumer):
-        proc = Process(name='consumer-%d' % _, target=Consumer(redis_db=arg.redis_db).consume)
+        worker = Consumer(redis_db=arg.redis_db, cookie_file=arg.cookie_file).consume
+        proc = Process(name='consumer-%d' % _, target=worker)
         proc.start()
         consumer_pool.append(proc)
     for _ in range(arg.producer):

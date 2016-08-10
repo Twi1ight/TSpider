@@ -15,9 +15,11 @@ class Consumer(object):
     def __init__(self, **kwargs):
         """
         :param redis_db: redis db index. N for task queue and N+1 for cache.
+        :param cookie_file: cookie-file used for spider, export from chrome by EditThisCookie plugin
         :return:
         """
         kwargs.setdefault('redis_db', 0)
+        self.__cookie_file = kwargs.pop('cookie_file', None)
         self.__kwargs = kwargs.copy()
         self.redis_utils = RedisUtils(**kwargs)
 
@@ -31,7 +33,7 @@ class Consumer(object):
                 url = self.redis_utils.fetch_one_task()
                 logger.info('get task url: %s' % url)
                 logger.info('%d tasks left' % self.redis_utils.task_counts)
-                self.start_spider(url)
+                self.start_spider(url, self.__cookie_file)
             except:
                 logger.exception('consumer exception!')
                 if not self.redis_utils.connected:
@@ -39,8 +41,8 @@ class Consumer(object):
                     self.redis_utils = RedisUtils(**self.__kwargs)
                 time.sleep(10)
 
-    def start_spider(self, url):
-        results = SpiderPage(url).spider()
+    def start_spider(self, url, cookie_file=None):
+        results = SpiderPage(url, cookie_file=cookie_file).spider()
         for _ in results:
             self.redis_utils.insert_result(_)
 
