@@ -7,7 +7,7 @@ settings
 import os
 import logging
 
-VERSION = 'v1.6'
+VERSION = 'v1.8'
 
 MODULE_PATH = os.path.dirname(os.path.realpath(__file__))
 SPIDER_PATH = os.path.join(MODULE_PATH, 'core/spider')
