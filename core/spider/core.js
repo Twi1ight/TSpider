@@ -57,6 +57,7 @@ exports.FireintheHole = function () {
     var filled_inputs = [];
     var submited_forms = [];
     var logout_text = ['logout', 'quit', '注销', '退出', '注销登录', '退出登录', '安全注销', '安全退出'];
+
     function fillInputs() {
         var inputs = document.getElementsByTagName('input');
         //console.log('get ' + inputs.length + ' inputs total');
@@ -185,21 +186,29 @@ exports.FireintheHole = function () {
 
     function getEvents() {
         var allElements, len;
+        var void_jscode = ['javascript:;', 'javascript:void(0)', 'javascript:void(0);'];
         allElements = document.getElementsByTagName('*');
         len = allElements.length;// allElements will change,len will change
         for (var i = 0; i < len; i++) {
             //skip logout element
-            if(logout_text.indexOf(allElements[i].innerText)){
+            if (logout_text.indexOf(allElements[i].innerText)) {
                 continue
             }
             //js_code
             if (allElements[i].href) {
-                //todo javascript:; javascript:void(0) javascript:void(0);  onclick()
-                var jscode = allElements[i].href.match("javascript:(.*)");
-                if (jscode) {
-                    if (events_func_str.indexOf(jscode[0]) < 0) {
-                        events.push(jscode[0]);
-                        events_func_str.push(jscode[0]);
+                //javascript:; javascript:void(0) javascript:void(0); add onclick() event
+                var match = allElements[i].href.match("javascript:(.*)");
+                if (match) {
+                    var jscode = match[0];
+                    if (void_jscode.indexOf(jscode) >= 0) {
+                        if (typeof allElements[i].onclick !== 'function') {
+                            events.push(allElements[i])
+                        }
+                    } else {
+                        if (events_func_str.indexOf(jscode) < 0) {
+                            events.push(jscode);
+                            events_func_str.push(jscode);
+                        }
                     }
                 }
             }
@@ -238,7 +247,7 @@ exports.FireintheHole = function () {
         var elements = document.getElementsByTagName(tag);
         for (var i = 0; i < elements.length; i++) {
             //skip logout url
-            if(logout_text.indexOf(elements[i].innerText)){
+            if (logout_text.indexOf(elements[i].innerText)) {
                 continue
             }
             var method, referer, url, request;

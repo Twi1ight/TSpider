@@ -22,8 +22,8 @@ var casper = require('casper').create({
         loadPlugins: false,         // use these settings
         userAgent: user_agent
     },
-    logLevel: "debug",               // Only "info" level messages will be logged
-    verbose: true                   // log messages will be printed out to the console
+    logLevel: "info",               // Only "info" level messages will be logged
+    verbose: false                   // log messages will be printed out to the console
 });
 
 
