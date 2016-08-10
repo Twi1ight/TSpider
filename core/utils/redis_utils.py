@@ -47,15 +47,15 @@ class RedisUtils(object):
         self.h_hostname_reqcount = h_hostname_reqcount
 
         self.tld = tld
-        try:
-            self.redis_task.ping()
-        except:
-            logger.exception('connect to redis failed!')
-            self.redis_task = None
 
     @property
     def connected(self):
-        return True if self.redis_task else False
+        try:
+            self.redis_task.ping()
+            return True
+        except:
+            logger.exception('connect to redis failed!')
+            return False
 
     def fetch_one_task(self, timeout=0):
         """
@@ -226,3 +226,9 @@ class RedisUtils(object):
         :return:
         """
         self.redis_task.hsetnx(self.h_domain_blacklist, domain, '*')
+
+    def is_logout_url(self, url):
+        """
+        :param url: URL class instance
+        :return:
+        """

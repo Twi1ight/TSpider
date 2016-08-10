@@ -4,6 +4,8 @@
 """
 consumer
 """
+import time
+
 from core.spider.spider import SpiderPage
 from core.utils.log import logger
 from core.utils.redis_utils import RedisUtils
@@ -16,6 +18,7 @@ class Consumer(object):
         :return:
         """
         kwargs.setdefault('redis_db', 0)
+        self.__kwargs = kwargs.copy()
         self.redis_utils = RedisUtils(**kwargs)
 
     def consume(self):
@@ -24,11 +27,17 @@ class Consumer(object):
             return
 
         while True:
-            url = self.redis_utils.fetch_one_task()
-            logger.info('get task url: %s' % url)
-            logger.info('%d tasks left' % self.redis_utils.task_counts)
-            self.start_spider(url)
-            # time.sleep(3)
+            try:
+                url = self.redis_utils.fetch_one_task()
+                logger.info('get task url: %s' % url)
+                logger.info('%d tasks left' % self.redis_utils.task_counts)
+                self.start_spider(url)
+            except:
+                logger.exception('consumer exception!')
+                if not self.redis_utils.connected:
+                    logger.error('redis disconnected! reconnecting...')
+                    self.redis_utils = RedisUtils(**self.__kwargs)
+                time.sleep(10)
 
     def start_spider(self, url):
         results = SpiderPage(url).spider()

@@ -189,6 +189,7 @@ exports.FireintheHole = function () {
         for (var i = 0; i < len; i++) {
             //js_code
             if (allElements[i].href) {
+                //todo javascript:; javascript:void(0) javascript:void(0);  onclick()
                 var jscode = allElements[i].href.match("javascript:(.*)");
                 if (jscode) {
                     if (events_func_str.indexOf(jscode[0]) < 0) {

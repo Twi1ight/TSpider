@@ -15,7 +15,6 @@ class MongoUtils(object):
         try:
             self._client = MongoClient('mongodb://{}:{}'.format(MongoConf.host, MongoConf.port),
                                        connect=connect)
-            self._client.server_info()
             self._target = self._client[database][target_collection]
             self._other = self._client[database][other_collection]
         except:
@@ -24,7 +23,12 @@ class MongoUtils(object):
 
     @property
     def connected(self):
-        return True if self._client else False
+        try:
+            self._client.server_info()
+            return True
+        except:
+            logger.exception('mongodb connection test excepiton!')
+            return False
 
     def save(self, reqdict, is_target=True, check_exists=False):
         if not self._client:

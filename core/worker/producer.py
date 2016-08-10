@@ -6,6 +6,8 @@ producer
 """
 import json
 
+import time
+
 from core.utils.redis_utils import RedisUtils
 from core.utils.mongodb import MongoUtils
 from core.utils.url import URL
@@ -38,7 +40,7 @@ class Producer(object):
 
         self.tld = kwargs.get('tld')
         self.mongo_db = kwargs.pop('mongo_db', 'tspider')
-
+        self.__kwargs = kwargs.copy()
         self.redis_utils = RedisUtils(**kwargs)
 
     def produce(self):
@@ -49,9 +51,19 @@ class Producer(object):
             return
 
         while True:
-            _, req = self.redis_utils.fetch_one_result()
-            logger.debug('got req, %d results left' % self.redis_utils.result_counts)
-            self.proc_req(req)
+            try:
+                _, req = self.redis_utils.fetch_one_result()
+                logger.debug('got req, %d results left' % self.redis_utils.result_counts)
+                self.proc_req(req)
+            except:
+                logger.exception('produce exception!')
+                if not self.redis_utils.connected:
+                    logger.error('redis disconnected! reconnecting...')
+                    self.redis_utils = RedisUtils(**self.__kwargs)
+                if not self.mongodb.connected:
+                    logger.error('mongodb disconnected! reconnecting...')
+                    self.mongodb = MongoUtils(database=self.mongo_db)
+                time.sleep(10)
 
     def proc_req(self, req):
         try:
