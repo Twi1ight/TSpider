@@ -111,6 +111,10 @@ class URL(object):
         return self._p.fragment
 
     @property
+    def index_page(self):
+        return urlparse.urljoin(self.urlstring, '/', allow_fragments=False)
+
+    @property
     def store_pattern_mongodb(self):
         """
         use by producer to query whether url is storred in mongodb

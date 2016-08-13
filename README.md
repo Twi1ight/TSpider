@@ -56,3 +56,4 @@ There are 5 list/hashtable in redis
 ##0x0x TODO  
 
 * add post url as task
+* save response body which size <= 1k

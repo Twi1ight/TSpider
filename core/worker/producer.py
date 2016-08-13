@@ -105,8 +105,11 @@ class Producer(object):
         if method == 'POST':
             logger.debug('POST not support now')
         elif method == 'GET':
+            # new host found, add index page to task queue
+            if self.redis_utils.get_hostname_reqcount(url.hostname) == 0:
+                self.redis_utils.create_url_task(URL(url.index_page), add_whitelist=False)
             # check url validation inside create_url_task
-            self.redis_utils.create_url_task(url, set_target=False)
+            self.redis_utils.create_url_task(url, add_whitelist=False)
         else:
             # not GET nor POST
             logger.error('HTTP Verb %s found!' % method)
