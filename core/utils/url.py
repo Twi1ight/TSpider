@@ -115,24 +115,24 @@ class URL(object):
         return urlparse.urljoin(self.urlstring, '/', allow_fragments=False)
 
     @property
-    def store_pattern_mongodb(self):
+    def url_pattern(self):
         """
         use by producer to query whether url is storred in mongodb
         :return:
         """
-        return urlparse.urlunsplit((self.scheme, self.netloc, self.spider_pattern, '', ''))
+        return urlparse.urlunsplit((self.scheme, self.netloc, self.path_param_pattern, '', ''))
 
-    def store_pattern_redis(self, method):
+    def url_pattern_with_method(self, method):
         """
         for producer to query whether url is saved to redis
-        replace store_pattern_mongodb for performace
+        replace url_pattern for performace
         :return:
         """
-        url_pattern = urlparse.urlunsplit((self.scheme, self.netloc, self.spider_pattern, '', ''))
+        url_pattern = urlparse.urlunsplit((self.scheme, self.netloc, self.path_param_pattern, '', ''))
         return '{}-{}'.format(method, url_pattern)
 
     @property
-    def spider_pattern(self):
+    def path_param_pattern(self):
         """
         used by spider to query whether url is scanned
         stored in redis hashtable '{scheme://netloc}'
@@ -157,5 +157,5 @@ class URL(object):
 if __name__ == '__main__':
     urlstring = 'http://www.test.com/fuck/kjskdjf.php?args=kjsdfu&k=kuc&ii=ksc#skdf'
     url = URL(urlstring)
-    print url.spider_pattern
-    print url.store_pattern_mongodb
+    print url.path_param_pattern
+    print url.url_pattern

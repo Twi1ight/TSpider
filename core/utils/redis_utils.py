@@ -95,7 +95,7 @@ class RedisUtils(object):
         :param url: URL class instance
         :return:
         """
-        pattern = url.store_pattern_redis(method)
+        pattern = url.url_pattern_with_method(method)
         self.redis_cache.hsetnx(self.h_url_saved, pattern, '*')
 
     def is_url_saved(self, method, url):
@@ -104,7 +104,7 @@ class RedisUtils(object):
         :param url: URL class instance
         :return:
         """
-        pattern = url.store_pattern_redis(method)
+        pattern = url.url_pattern_with_method(method)
         return self.redis_cache.hexists(self.h_url_saved, pattern)
 
     def incr_hostname_reqcount(self, hostname):
@@ -121,14 +121,14 @@ class RedisUtils(object):
         :param url: URL class instance
         :return:
         """
-        self.redis_cache.hsetnx(url.scanned_table, url.spider_pattern, '*')
+        self.redis_cache.hsetnx(url.scanned_table, url.path_param_pattern, '*')
 
     def is_url_scanned(self, url):
         """
         :param url: URL class instance
         :return:
         """
-        return self.redis_cache.hexists(url.scanned_table, url.spider_pattern)
+        return self.redis_cache.hexists(url.scanned_table, url.path_param_pattern)
 
     def is_target(self, url):
         """

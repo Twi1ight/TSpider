@@ -78,7 +78,7 @@ class Producer(object):
         url = URL(urlstring)
 
         # store to mongodb
-        data.update({'pattern': url.store_pattern_mongodb,
+        data.update({'pattern': url.url_pattern,
                      'hostname': url.hostname,
                      'domain': url.domain
                      })
