@@ -151,7 +151,7 @@ class URL(object):
 
     @property
     def blocked(self):
-        return True if self.extension in URL.BLOCKEXT or self.hostname in URL.BLOCKHOST else False
+        return True if self.extension.lower() in URL.BLOCKEXT or self.hostname.lower() in URL.BLOCKHOST else False
 
 
 if __name__ == '__main__':
