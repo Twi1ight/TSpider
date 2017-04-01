@@ -6,7 +6,7 @@ TSpider is a web spider based on CasperJS and PhantomJS
 """
 import sys
 import argparse
-from multiprocessing import Pool, Process
+from multiprocessing import Process
 
 from core.utils.log import logger
 from core.utils.url import URL

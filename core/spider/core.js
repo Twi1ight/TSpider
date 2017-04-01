@@ -64,7 +64,7 @@ exports.AddMutationObserver = function () {
                     var node = record.addedNodes[i];
                     if (node.src || node.href) {
                         window.LINKS.push(node.src || node.href);
-                        console.log('DOMNodeAddeded:', node.src || node.href);
+                        console.log('Mutation AddedNodes:', node.src || node.href);
                     }
                 }
             }
@@ -100,6 +100,8 @@ exports.FireintheHole = function (frame) {
     var submited_forms = [];
     var logout_text = ['logout', 'quit', '注销', '退出', '注销登录', '退出登录', '安全注销', '安全退出'];
     var void_jscode = ['javascript:;', 'javascript:void(0)', 'javascript:void(0);'];
+    var data_signal_prefix = 'tspider://data/';
+    var exit_signal_prefix = 'tspider://exit/';
 
     function funcWithCatch(func) {
         try {
@@ -258,6 +260,7 @@ exports.FireintheHole = function (frame) {
                 var request = form.method.toUpperCase() + '|||' + rmFragment(action) + '|||' + querystring + '|||' + rmFragment(form.baseURI);
                 if (urls.indexOf(request) < 0) {
                     urls.push(request);
+                    console.log(data_signal_prefix + request);
                 }
 
             }
@@ -283,7 +286,7 @@ exports.FireintheHole = function (frame) {
                 var attr_value = attrs[j].nodeValue;
                 if (attr_name.substr(0, 2) === "on") {
                     if (events_func_str.indexOf(attr_value) < 0) {
-                        console.log(253, 'on*   ' + attr_value);
+                        console.log(289, 'on*   ' + attr_value);
                         events.unshift(attr_value);
                         events_func_str.unshift(attr_value);
                     }
@@ -292,7 +295,7 @@ exports.FireintheHole = function (frame) {
                     if (void_jscode.indexOf(attrs[j].nodeValue) >= 0)
                         continue;
                     if (events_func_str.indexOf(attr_value) < 0) {
-                        console.log(263, 'javascript: ' + attr_value);
+                        console.log(298, 'javascript: ' + attr_value);
                         events.unshift(attr_value);
                         events_func_str.unshift(attr_value);
                     }
@@ -315,6 +318,7 @@ exports.FireintheHole = function (frame) {
                 request = method + '|||' + rmFragment(url) + '|||null|||' + rmFragment(document.baseURI);
                 if (urls.indexOf(request) < 0) {
                     urls.push(request);
+                    console.log(data_signal_prefix + request);
                 }
             }
         }
@@ -338,6 +342,9 @@ exports.FireintheHole = function (frame) {
     }
 
     function mainframe() {
+        if (frame !== 'mainframe') {
+            return;
+        }
         while (window.top.LINKS.length > 0) {
             var url = window.top.LINKS.shift();
             // console.log(312, url);
@@ -349,6 +356,7 @@ exports.FireintheHole = function (frame) {
                 var request = 'GET' + '|||' + rmFragment(url) + '|||null|||' + rmFragment(document.baseURI);
                 if (urls.indexOf(request) < 0) {
                     urls.push(request);
+                    console.log(data_signal_prefix + request);
                 }
             } else if (events_func_str.indexOf(url) < 0) {
                 events_func_str.push(url);
@@ -365,19 +373,22 @@ exports.FireintheHole = function (frame) {
         funcWithCatch(getStaticUrls);
         funcWithCatch(getForms);
         funcWithCatch(getStaticUrls);
-        if (frame === 'mainframe') {
-            mainframe()
-        }
+        funcWithCatch(mainframe);
+
         console.log("events.length ", events.length);
         if (events.length > 0) {
             try {
+                var timeout = 1000;
+                var local_events = ['mouseout', 'mouseover', 'mouseleave', 'mousemove', 'mouseenter', 'blur', 'focus'];
                 var event = events.shift();
                 if (typeof event === 'string') {
                     console.log('string event ', event);
                     // eval(event)
                     runInFunc(event);
                 } else if (typeof event === 'object') {
-                    console.log('object event ', event);
+                    console.log('object event ', event["event"], event["element"].tagName);
+                    if (local_events.indexOf(event['event']) >= 0)
+                        timeout = 100;
                     var evt = document.createEvent('CustomEvent');
                     evt.initCustomEvent(event["event"], true, true, null);
                     event["element"].dispatchEvent(evt);
@@ -387,12 +398,11 @@ exports.FireintheHole = function (frame) {
             }
             setTimeout(function () {
                 main()
-            }, 1000)
+            }, timeout)
         } else {
             setTimeout(function () {
-                if (frame === 'mainframe')
-                    mainframe();
-                console.log('tspider://' + JSON.stringify({frame: frame, urls: urls}));
+                funcWithCatch(mainframe);
+                console.log(exit_signal_prefix + frame);
             }, 3000)
         }
     }
@@ -401,7 +411,7 @@ exports.FireintheHole = function (frame) {
     if (typeof window.top.LINKS === "undefined") {
         setTimeout(function () {
             console.log('skip NOOOOOOOOOOOOOOOOT same origin frame');
-            console.log('tspider://' + JSON.stringify({frame: frame, urls: urls}));
+            console.log(exit_signal_prefix + frame);
         }, 100);
     } else {
         main();

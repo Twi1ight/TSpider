@@ -13,7 +13,7 @@ var init_url, result_file, cookie_file, requested_count = 0, static_urls = [], r
 var first_page_request = true;
 var max_frames = 0;
 var done_frames = 0;
-var timeout = 90000;
+var timeout = 120000;
 var casper = require('casper').create({
     //clientScripts: [
     //    'jquery-2.2.4.min.js'      // These two scripts will be injected in remote
@@ -35,14 +35,14 @@ var casper = require('casper').create({
 
 if (casper.cli.args.length === 1) {
     init_url = casper.cli.get(0);
-    if (casper.cli.has('output-file')) {
-        result_file = casper.cli.get('output-file');
+    if (casper.cli.has('output')) {
+        result_file = casper.cli.get('output');
     }
-    if (casper.cli.has('cookie-file')) {
-        cookie_file = casper.cli.get('cookie-file')
+    if (casper.cli.has('cookie')) {
+        cookie_file = casper.cli.get('cookie')
     }
 } else {
-    casper.echo('usage: crawler.js http://foo.bar [--output-file=output.txt] [--cookie-file=cookie.txt]', 'INFO');
+    casper.echo('usage: crawler.js http://foo.bar [--output=output.txt] [--cookie=cookie.txt]', 'INFO');
     casper.exit()
 }
 
@@ -114,15 +114,13 @@ casper.on('remote.alert', function (message) {
 });
 
 casper.on('remote.message', function (msg) {
-    var prefix = 'tspider://';
-    if (msg.substr(0, prefix.length) === prefix) {
-        var data = JSON.parse(msg.substr(prefix.length));
-        var frame = data['frame'];
-        var urls = data['urls'];
-        this.echo(frame + ' got ' + urls.length + ' urls.', 'INFO');
-        for (var i = 0; i < urls.length; i++) {
-            static_urls.push(urls[i])
-        }
+    var data_signal_prefix = 'tspider://data/';
+    var exit_signal_prefix = 'tspider://exit/';
+    if (msg.substr(0, data_signal_prefix.length) === data_signal_prefix) {
+        var url = msg.substr(data_signal_prefix.length);
+        static_urls.push(url);
+    }else if(msg.substr(0, exit_signal_prefix.length) === exit_signal_prefix){
+        var frame = msg.substr(exit_signal_prefix.length);
         this.echo(frame, 'ERROR');
         if (frame === 'iframe') {
             if (++done_frames === max_frames) {
@@ -174,7 +172,8 @@ casper.then(function () {
     }
 });
 
-casper.wait(timeout, function () {
+casper.wait(timeout - 1000, function () {
+    // casper.capture('timeout.png');
     this.echo('casper_crawler timeout!', 'ERROR');
 });
 

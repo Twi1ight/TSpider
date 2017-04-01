@@ -15,7 +15,7 @@ class Consumer(object):
     def __init__(self, **kwargs):
         """
         :param redis_db: redis db index. N for task queue and N+1 for cache.
-        :param cookie_file: cookie-file used for spider, export from chrome by EditThisCookie plugin
+        :param cookie_file: cookie file used for spider, export from chrome by EditThisCookie plugin
         :return:
         """
         kwargs.setdefault('redis_db', 0)
