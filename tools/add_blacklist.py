@@ -27,7 +27,7 @@ def remove_from_tasklist(domain):
             break
 
     for url in urls:
-        r.create_url_task(URL(url), add_whitelist=False, valid_url_check=False)
+        r.create_task_from_url(URL(url), add_whitelist=False, valid_url_check=False)
 
 
 if __name__ == '__main__':

@@ -1,17 +1,18 @@
 /**
- * Created by John on 2016/7/28.
+ * original crawler.js
  */
 var url, cookie, postdata, auth, post, timeout, system = require('system'), page = require("webpage").create();
 var referer = "";
-if (system.args.length !== 6) {
+var casper = require('casper').create();
+if (casper.cli.args.length !== 5) {
     console.log('Usage: crawls.js <url> <cookie> <auth> <post> <timeout>');
     phantom.exit();
 } else {
-    url = system.args[1];
-    cookie = system.args[2];
-    auth = system.args[3];
-    post = system.args[4];
-    timeout = system.args[5];
+    url = casper.cli.get(0);
+    cookie = casper.cli.get(1);
+    auth = casper.cli.get(2);
+    post = casper.cli.get(3);
+    timeout = casper.cli.get(4);
     page.settings.loadImages = false;
     page.settings.resourceTimeout = timeout ? timeout * 1000 : 5 * 1000;
     headers = {};

@@ -118,5 +118,7 @@ fabric.properties
 *.txt
 *.rdb
 .tmp
+.DS_Store
+*.html
 subproc.js
 node_modules/

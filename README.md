@@ -1,59 +1,25 @@
-#TSpider
-Yet an other dynamic web spider.
+# TSpider
 
-##0x01 Baics
-Spider component based on [http://blog.wils0n.cn/?post=18](http://blog.wils0n.cn/?post=18) by [wils0n](http://blog.wils0n.cn)  
-With redis as task MQ, and save all urls to mongodb  
+简单来讲，这货是一个动态web爬虫
 
-**requirements**  
+## 背景
 
-* casperjs
-* phantomjs
-* redis
-* mongodb
-* python 2.7.x
+基于CasperJS和PhantomJS，所以可以自动渲染网页、动态解析js，支持ajax和各种乱七八糟的前端交互。
 
-**python module**  
+代码基于[phantomjs爬虫小记](http://blog.wils0n.cn/?post=18) by [wils0n](http://blog.wils0n.cn) ，在tuicool上也有这篇文章[http://www.tuicool.com/articles/JbEfIvV](http://www.tuicool.com/articles/JbEfIvV) ， 原作者的代码在Github上也有[crawler_phantomjs](https://github.com/wilson9x1/crawler_phantomjs)
 
-- publicsuffix == 1.1.0  
-- pymongo == 3.3.0  
-- redis == 2.10.5  
+我在其基础上，增强了交互功能，修复了一些问题，新增了一些功能。
 
-##0x02 Settings  
-Most settings are inside *settings.py*  
-	
-	LOG_LEVEL = logging.DEBUG
-	MAX_URL_REQUEST_PER_SITE = 100
+功能：
 
-	class RedisConf(object):
-	    host = '127.0.0.1'
-	    port = 6379
-	    password = None
+- 自动填充和提交表单
+- 从文件载入cookie
+- 过滤广告和统计链接
+- 过滤静态资源访问
+- 载入cookie后防注销和登出
+- 支持各种on*交互事件
 
-	class MongoConf(object):
-	    host = '127.0.0.1'
-	    port = 27017
-	    username = None
-	    password = None
 
-**logging**  
-Currently logger is file size rotating, default backup count is 3.    
-modify `custom_logger` function to customize it
+## 技术细节
 
-**redis**  
-There are 5 list/hashtable in redis  
-`spider:task` [*list*] task queue, producer will put target into this list  
-`spider:result` [*list*] cache spider result  
-`spider:targetdomain` [*hash*] domains allow to spider, domain not in this hashtable won't be grab  
-`spider:reqcount` [*hash*]  record request count for each domain  
-`spider:saved` [*hash*] record url pattern which has saved to mongodb
-
-**mongodb**  
-`tspider` databass  
-`tspider.targetresult`  collection  
-`tspider.otheresult` collection
-
-##0x0x TODO  
-
-* add post url as task
-* save response body which size <= 1k
+window.callPhantom  remote.callback 不支持iframe  

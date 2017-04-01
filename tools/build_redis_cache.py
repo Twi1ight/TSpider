@@ -7,7 +7,7 @@ buil scanned pattern cache for redis from mongodb
 import sys
 
 sys.path.append('../')
-from core.utils.mongodb import MongoUtils
+from core.utils.mongo_utils import MongoUtils
 from core.utils.redis_utils import RedisUtils
 from core.utils.url import URL
 

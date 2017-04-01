@@ -2,7 +2,7 @@
 # -*- coding:utf-8 -*-
 #
 """
-TSpider main file
+TSpider is a web spider based on CasperJS and PhantomJS
 """
 import sys
 import argparse
@@ -27,7 +27,7 @@ def cmdparse():
     parser.add_argument('--cookie-file', dest='cookie_file', metavar='FILE',
                         help='Cookie file from chrome export by EditThisCookie')
     parser.add_argument('--tld', action='store_true', dest='tld',
-                        help='Spider all subdomains')
+                        help='Crawl all subdomains')
     parser.add_argument('--continue', dest='keepon', action='store_true',
                         help='Continue last task, no init target [-u|-f] need')
     worker = parser.add_argument_group(title='Worker', description='options for worker')
@@ -65,17 +65,16 @@ if __name__ == '__main__':
     if not arg.keepon:
         target = arg.url or arg.file
         producer = Producer(tld=tld_enable, mongo_db=arg.mongo_db, redis_db=arg.redis_db)
-        if isinstance(target, basestring):
-
+        if isinstance(target, str):
             url = URL(target)
             if not url.valid or url.blocked:
                 logger.error('not valid url, exit.')
                 sys.exit(-1)
-            producer.redis_utils.create_url_task(url)
+            producer.redis_utils.create_task_from_url(url)
         # file object
         else:
             with target:
-                producer.create_file_task(target)
+                producer.create_task_from_file(target)
 
     map(lambda x: x.join(), consumer_pool)
     map(lambda x: x.join(), producer_pool)

@@ -1,28 +1,34 @@
 /**
- * Created by John on 2016/7/28.
+ * Created by Twi1ight on 2016/7/28.
  * http://blog.wils0n.cn/?post=18
  *
  *  casperjs --ignore-ssl-errors=true --ssl-protocol=any casper_crawler.js http://foo.bar outfile
  */
 'use strict';
-var user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11"
+var user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11";
 var core = require('./core');
 var utils = require('utils');
 var fs = require('fs');
 var init_url, result_file, cookie_file, requested_count = 0, static_urls = [], requested_urls = [];
+var first_page_request = true;
+var max_frames = 0;
+var done_frames = 0;
+var timeout = 90000;
 var casper = require('casper').create({
     //clientScripts: [
     //    'jquery-2.2.4.min.js'      // These two scripts will be injected in remote
     //    'includes/underscore.js'   // DOM on every request
     //],
     viewportSize: {width: 800, height: 600},
-    timeout: 90000,
+    timeout: timeout,
     pageSettings: {
-        loadImages: false,        // The WebPage instance used by Casper will
-        loadPlugins: false,         // use these settings
+        loadImages: false,           // The WebPage instance used by Casper will
+        loadPlugins: false,          // use these settings
+        webSecurity: false,
         userAgent: user_agent
     },
-    logLevel: "info",               // Only "info" level messages will be logged
+    sslProtocol: 'any',
+    logLevel: 'info',                // Only "info" level messages will be logged
     verbose: false                   // log messages will be printed out to the console
 });
 
@@ -36,7 +42,7 @@ if (casper.cli.args.length === 1) {
         cookie_file = casper.cli.get('cookie-file')
     }
 } else {
-    console.log('usage: crawler.js http://foo.bar [--output-file=output.txt] [--cookie-file=cookie.txt]');
+    casper.echo('usage: crawler.js http://foo.bar [--output-file=output.txt] [--cookie-file=cookie.txt]', 'INFO');
     casper.exit()
 }
 
@@ -46,7 +52,7 @@ if (!!cookie_file) {
             var content = fs.read(cookie_file);
             var cookies = JSON.parse(content);
             cookies.forEach(function (cookie) {
-                //console.log(JSON.stringify(cookie));
+                //this.echo(JSON.stringify(cookie),'INFO');
                 var ret = phantom.addCookie(cookie);
                 if (ret === false) {
                     casper.echo('addCookie failed: ' + JSON.stringify(cookie), 'INFO')
@@ -60,19 +66,40 @@ if (!!cookie_file) {
         casper.echo(exception, 'ERROR')
     }
 }
-
-//page.resource.requested   //Emitted when a new HTTP request is performed to open the required url.
-//resource.requested        //Emitted when any resource has been requested.
+//page.initialized          Emitted when PhantomJS’ WebPage object used by CasperJS has been initialized.
+casper.on('page.initialized', function (WebPage) {
+    WebPage.evaluate(function () {
+        window.EVENTS = [];
+        window.LINKS = [];
+        document.addEventListener('DOMNodeInserted', function (e) {
+            var node = e.target;
+            if (node.src || node.href) {
+                window.LINKS.push(node.src || node.href);
+                console.log('DOMNodeInserted: ', node.src || node.href)
+            }
+        }, true);
+        Element.prototype._addEventListener = Element.prototype.addEventListener;
+        Element.prototype.addEventListener = function (a, b, c) {
+            window.EVENTS.push({"event": a, "element": this});
+            console.log('addEventListener:', a, this);
+            this._addEventListener(a, b, c);
+        };
+    })
+});
+//page.resource.requested   Emitted when a new HTTP request is performed to open the required url.
+//resource.requested        Emitted when any resource has been requested.
 casper.on('page.resource.requested', function (requestData, request) {
-    var url = requestData.url;
-    if (core.evilResource(url)) {
-        request.abort()
+    if (first_page_request) {
+        first_page_request = false
+    } else {
+        request.abort();
     }
+    //will continue to trigger resource.requested
 });
 
 casper.on('resource.requested', function (requestData, request) {
     requested_count++;
-    //console.log(JSON.stringify(requestData));
+    //this.echo(JSON.stringify(requestData),'INFO');
     //utils.dump(requestData);
     requested_urls.push(JSON.stringify(requestData));
     var url = requestData.url;
@@ -102,50 +129,62 @@ casper.on('remote.alert', function (message) {
 });
 
 casper.on('remote.message', function (msg) {
-    this.echo('remote message caught: ' + msg, 'INFO');
+    var prefix = 'tspider://';
+    if (msg.substr(0, prefix.length) === prefix) {
+        var data = JSON.parse(msg.substr(prefix.length));
+        var frame = data['frame'];
+        var urls = data['urls'];
+        this.echo(frame + ' got ' + urls.length + ' urls.', 'INFO');
+        for (var i = 0; i < urls.length; i++) {
+            static_urls.push(urls[i])
+        }
+        this.echo(frame, 'ERROR');
+        if (frame === 'iframe') {
+            if (++done_frames === max_frames) {
+                this.emit('iframe.completed')
+            }
+        } else {
+            casper.exit()
+        }
+    } else {
+        this.echo('remote message caught: ' + msg, 'INFO');
+    }
 });
 
 casper.on('exit', function () {
+    var urls_count = static_urls.length + requested_urls.length;
+    this.echo('requests: ' + requested_count + ' urls: ' + urls_count, 'INFO');
     if (!!result_file) {
         this.echo('save urls to ' + result_file, 'INFO');
     }
     core.saveFile(static_urls, requested_urls, result_file)
 });
 
+casper.on('iframe.completed', function () {
+    this.echo('mainframe evaluate', 'INFO');
+    this.evaluate(core.FireintheHole, 'mainframe')
+});
+
+
 casper.start(init_url);
 
 casper.then(function () {
-    var urls = [];
     var iframe_count = this.page.childFramesCount();
-    console.log('find ' + iframe_count + ' iframes');
-    var max_frames = iframe_count < 100 ? iframe_count : 100;
-    for (var index = 0; index < max_frames; index++) {
-        this.withFrame(index, function () {
-            urls = this.evaluate(core.FireintheHole);
-            console.log('frame got ' + urls.length + ' urls.');
-            for (var i = 0; i < urls.length; i++) {
-                //console.log('frame[' + index + '] ' + urls[i]);
-                static_urls.push(urls[i]);
-            }
-        })
+    this.echo('find ' + iframe_count + ' iframes', 'INFO');
+    max_frames = iframe_count < 100 ? iframe_count : 100;
+    if (max_frames === 0) {
+        this.emit('iframe.completed')
+    } else {
+        for (var index = 0; index < max_frames; index++) {
+            this.withFrame(index, function () {
+                this.evaluate(core.FireintheHole, 'iframe')
+            })
+        }
     }
 });
 
-casper.wait(1000, function () {
-    var urls = [];
-    console.log('mainframe evaluate');
-    urls = this.evaluate(core.FireintheHole);
-    console.log('mainframe got ' + urls.length + ' urls.');
-    //utils.dump(urls);
-    for (var i = 0; i < urls.length; i++) {
-        //console.log('mainframe ' + urls[i]);
-        static_urls.push(urls[i]);
-    }
-});
-
-casper.wait(1000, function () {
-    console.log('wait for mainframe ends');
-    console.log('requested count ' + requested_count);
+casper.wait(timeout, function () {
+    this.echo('casper_crawler timeout!', 'ERROR');
 });
 
 casper.run();
