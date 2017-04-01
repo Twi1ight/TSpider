@@ -68,24 +68,9 @@ if (!!cookie_file) {
 }
 //page.initialized          Emitted when PhantomJS’ WebPage object used by CasperJS has been initialized.
 casper.on('page.initialized', function (WebPage) {
-    WebPage.evaluate(function () {
-        window.EVENTS = [];
-        window.LINKS = [];
-        document.addEventListener('DOMNodeInserted', function (e) {
-            var node = e.target;
-            if (node.src || node.href) {
-                window.LINKS.push(node.src || node.href);
-                console.log('DOMNodeInserted: ', node.src || node.href)
-            }
-        }, true);
-        Element.prototype._addEventListener = Element.prototype.addEventListener;
-        Element.prototype.addEventListener = function (a, b, c) {
-            window.EVENTS.push({"event": a, "element": this});
-            console.log('addEventListener:', a, this);
-            this._addEventListener(a, b, c);
-        };
-    })
+    WebPage.evaluate(core.AddMutationObserver)
 });
+
 //page.resource.requested   Emitted when a new HTTP request is performed to open the required url.
 //resource.requested        Emitted when any resource has been requested.
 casper.on('page.resource.requested', function (requestData, request) {
@@ -104,7 +89,7 @@ casper.on('resource.requested', function (requestData, request) {
     requested_urls.push(JSON.stringify(requestData));
     var url = requestData.url;
     if (core.evilResource(url)) {
-        this.echo('forbiden', 'ERROR');
+        this.echo(url + ' forbiden', 'ERROR');
         request.abort()
     }
 });
@@ -151,6 +136,11 @@ casper.on('remote.message', function (msg) {
     }
 });
 
+casper.on('iframe.completed', function () {
+    this.echo('mainframe evaluate', 'INFO');
+    this.evaluate(core.FireintheHole, 'mainframe')
+});
+
 casper.on('exit', function () {
     var urls_count = static_urls.length + requested_urls.length;
     this.echo('requests: ' + requested_count + ' urls: ' + urls_count, 'INFO');
@@ -160,13 +150,14 @@ casper.on('exit', function () {
     core.saveFile(static_urls, requested_urls, result_file)
 });
 
-casper.on('iframe.completed', function () {
-    this.echo('mainframe evaluate', 'INFO');
-    this.evaluate(core.FireintheHole, 'mainframe')
+casper.start();
+
+casper.open(init_url, {
+    method: 'get',
+    headers: {
+        'Referer': init_url
+    }
 });
-
-
-casper.start(init_url);
 
 casper.then(function () {
     var iframe_count = this.page.childFramesCount();

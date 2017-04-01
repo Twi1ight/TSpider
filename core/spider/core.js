@@ -48,15 +48,58 @@ exports.saveFile = function (static_urls, requested_urls, filename) {
     f.close();
 };
 
+exports.AddMutationObserver = function () {
+    window.EVENTS = [];
+    window.EVENTS_HISTORY = [];
+    window.LINKS = [];
+    var MutationObserver = window.MutationObserver;
+    var callback = function (records) {
+        records.forEach(function (record) {
+            // console.log('Mutation type: ', record.type);
+            if (record.type === 'attributes') {
+                console.log("Mutation attributes:", record.target[record.attributeName]);
+                window.LINKS.push(record.target[record.attributeName]);
+            } else if (record.type === 'childList') {
+                for (var i = 0; i < record.addedNodes.length; ++i) {
+                    var node = record.addedNodes[i];
+                    if (node.src || node.href) {
+                        window.LINKS.push(node.src || node.href);
+                        console.log('DOMNodeAddeded:', node.src || node.href);
+                    }
+                }
+            }
+        });
+    };
+    var option = {
+        'childList': true,
+        'subtree': true,
+        'attributes': true,
+        'attributeFilter': ['href', 'src']
+    };
+    var mo = new MutationObserver(callback);
+    mo.observe(document, option);
+
+    Element.prototype._addEventListener = Element.prototype.addEventListener;
+    Element.prototype.addEventListener = function (a, b, c) {
+        var hash = a + this.tagName + '|' + this.className + '|' + this.id + '|' + this.tabIndex;
+        if (window.EVENTS_HISTORY.indexOf(hash) < 0) {
+            window.EVENTS.push({"event": a, "element": this});
+            window.EVENTS_HISTORY.unshift(hash);
+            console.log('addEventListener:', a, this);
+        }
+        this._addEventListener(a, b, c);
+    };
+};
+
 exports.FireintheHole = function (frame) {
     "use strict";
     var urls = [];
-    //var retvar = [];
     var events = [];
     var events_func_str = [];
     var filled_inputs = [];
     var submited_forms = [];
     var logout_text = ['logout', 'quit', '注销', '退出', '注销登录', '退出登录', '安全注销', '安全退出'];
+    var void_jscode = ['javascript:;', 'javascript:void(0)', 'javascript:void(0);'];
 
     function funcWithCatch(func) {
         try {
@@ -113,17 +156,15 @@ exports.FireintheHole = function (frame) {
         var buttons = [];
         for (var j = 0; j < inputs.length; j++) {
             var obj = inputs[j];
-            if (!obj.hasAttribute('type')) {
-                continue
-            }
+            if (!obj['type'])
+                continue;
             // check if filled
             var pattern = obj.name + '|' + obj.type + '|' + obj.id;
-            if (filled_inputs.indexOf(pattern) >= 0) {
-                continue
-            }
+            if (filled_inputs.indexOf(pattern) >= 0)
+                continue;
             filled_inputs.push(pattern);
 
-            console.log('input => name: "' + obj.name + '" type: ' + obj.type + '" id: ' + obj.id);
+            console.log('input => name: "' + obj.name + '" type: "' + obj.type + '" id: ' + obj.id);
             switch (obj.type) {
                 //case 'hidden':
                 case 'submit':
@@ -138,9 +179,8 @@ exports.FireintheHole = function (frame) {
                     continue;
             }
             // exist default value
-            if (obj.name && obj.value) {
-                continue
-            }
+            if (obj.name && obj.value)
+                continue;
             // fill each input
             var length, value;
             switch (obj.type) {
@@ -153,7 +193,7 @@ exports.FireintheHole = function (frame) {
                     } else if (obj.name.indexOf('phone') >= 0 || obj.name.indexOf('mobile') >= 0) {
                         value = '13800138000';
                     } else {
-                        length = obj.maxLength > 0 && obj.maxLength !== 524288 ? obj.maxLength : 10;
+                        length = obj.maxLength > 0 && obj.maxLength !== 524288 ? Math.min(obj.maxLength, 20) : 10;
                         value = rndStr(length);
                     }
                     break;
@@ -176,9 +216,8 @@ exports.FireintheHole = function (frame) {
             var s = selects[k];
             // check if filled
             var spattern = s.name + '|' + s.type + '|' + s.id;
-            if (filled_inputs.indexOf(spattern) >= 0) {
-                continue
-            }
+            if (filled_inputs.indexOf(spattern) >= 0)
+                continue;
             filled_inputs.push(spattern);
             console.log('input => name: "' + s.name + '" type: ' + s.type + '" id: ' + s.id);
             s.selectedIndex = 1;
@@ -199,10 +238,8 @@ exports.FireintheHole = function (frame) {
             var form = f[i];
             var action = form.action ? form.action : form.baseURI;
             var pattern = form.name + '|' + action;
-            if (submited_forms.indexOf(pattern) >= 0) {
-                //console.log('already submitted');
-                continue
-            }
+            if (submited_forms.indexOf(pattern) >= 0)
+                continue;
             submited_forms.push(pattern);
             var inputs = form.getElementsByTagName('input');
             console.log('get ' + inputs.length + ' inputs from form-' + (i + 1));
@@ -210,9 +247,8 @@ exports.FireintheHole = function (frame) {
             for (var j = 0; j < inputs.length; j++) {
                 var obj = inputs[j];
                 console.log(obj.name + ' ' + obj.type + ' ' + obj.id + ' ' + obj.value);
-                if (!obj.hasAttribute('type')) {
-                    continue
-                }
+                if (!obj.hasAttribute('type'))
+                    continue;
                 if (obj.name && obj.value) {
                     formdata[obj.name] = obj.value;
                 }
@@ -229,21 +265,18 @@ exports.FireintheHole = function (frame) {
         }
         //click all buttons
         for (i = 0; i < buttons.length; i++) {
-            if (logout_text.indexOf(buttons[i].innerText) >= 0) {
-                continue
-            }
+            if (logout_text.indexOf(buttons[i].innerText) >= 0)
+                continue;
             buttons[i].click()
         }
     }
 
     function getEvents() {
-        var void_jscode = ['javascript:;', 'javascript:void(0)', 'javascript:void(0);'];
         var nodes = document.all;
         for (var i = 0; i < nodes.length; i++) {
             //skip logout element
-            if (logout_text.indexOf(nodes[i].innerText) >= 0) {
-                continue
-            }
+            if (logout_text.indexOf(nodes[i].innerText) >= 0)
+                continue;
             var attrs = nodes[i].attributes;
             for (var j = 0; j < attrs.length; j++) {
                 var attr_name = attrs[j].nodeName;
@@ -256,9 +289,8 @@ exports.FireintheHole = function (frame) {
                     }
                 }
                 if (attr_name in {"src": 1, "href": 1} && attrs[j].nodeValue.substr(0, 11) === "javascript:") {
-                    if (void_jscode.indexOf(attrs[j].nodeValue) >= 0) {
+                    if (void_jscode.indexOf(attrs[j].nodeValue) >= 0)
                         continue;
-                    }
                     if (events_func_str.indexOf(attr_value) < 0) {
                         console.log(263, 'javascript: ' + attr_value);
                         events.unshift(attr_value);
@@ -267,20 +299,14 @@ exports.FireintheHole = function (frame) {
                 }
             }
         }
-        // console.log('got', events.length, 'events');
-        // console.log('got', window.top.EVENTS.length, 'window events');
-        while (window.top.EVENTS.length > 0) {
-            events.unshift(window.top.EVENTS.shift())
-        }
     }
 
     function handleTag(tag, src) {
         var elements = document.getElementsByTagName(tag);
         for (var i = 0; i < elements.length; i++) {
             //skip logout url
-            if (logout_text.indexOf(elements[i].innerText) >= 0) {
-                continue
-            }
+            if (logout_text.indexOf(elements[i].innerText) >= 0)
+                continue;
             var method, referer, url, request;
             method = 'GET';
             referer = window.location.href;
@@ -303,33 +329,45 @@ exports.FireintheHole = function (frame) {
         handleTag('embed', 'src');
         handleTag('video', 'src');
         handleTag('audio', 'src');
-        // links in window.top.LINKS
-        if (!!window.top.LINKS.length) {
-            var url = window.top.LINKS.shift();
-            if (url && validScheme(url) && url.length < 1024) {
-                var request = 'GET' + '|||' + rmFragment(url) + '|||null|||' + rmFragment(document.baseURI);
-                if (urls.indexOf(request) < 0) {
-                    urls.push(request);
-                }
-            }
-        }
     }
 
-
-    function mainWork() {
-        funcWithCatch(getEvents);
-        funcWithCatch(getStaticUrls);
-        funcWithCatch(getForms);
-        funcWithCatch(getStaticUrls);
-    }
 
     function runInFunc(string) {
         var F = new Function(string);
         funcWithCatch(F);
     }
 
+    function mainframe() {
+        while (window.top.LINKS.length > 0) {
+            var url = window.top.LINKS.shift();
+            // console.log(312, url);
+            if (void_jscode.indexOf(url) >= 0)
+                continue;
+            if (validScheme(url)) {
+                if (url.length > 1024)
+                    continue;
+                var request = 'GET' + '|||' + rmFragment(url) + '|||null|||' + rmFragment(document.baseURI);
+                if (urls.indexOf(request) < 0) {
+                    urls.push(request);
+                }
+            } else if (events_func_str.indexOf(url) < 0) {
+                events_func_str.push(url);
+                events.push(url)
+            }
+        }
+        while (window.top.EVENTS.length > 0) {
+            events.unshift(window.top.EVENTS.shift());
+        }
+    }
+
     function main() {
-        mainWork();
+        funcWithCatch(getEvents);
+        funcWithCatch(getStaticUrls);
+        funcWithCatch(getForms);
+        funcWithCatch(getStaticUrls);
+        if (frame === 'mainframe') {
+            mainframe()
+        }
         console.log("events.length ", events.length);
         if (events.length > 0) {
             try {
@@ -352,6 +390,8 @@ exports.FireintheHole = function (frame) {
             }, 1000)
         } else {
             setTimeout(function () {
+                if (frame === 'mainframe')
+                    mainframe();
                 console.log('tspider://' + JSON.stringify({frame: frame, urls: urls}));
             }, 3000)
         }
@@ -360,7 +400,7 @@ exports.FireintheHole = function (frame) {
     //if can't access window.top.LINKS, the frame is not same origin, skip it
     if (typeof window.top.LINKS === "undefined") {
         setTimeout(function () {
-            console.log('skip NOT same origin frame');
+            console.log('skip NOOOOOOOOOOOOOOOOT same origin frame');
             console.log('tspider://' + JSON.stringify({frame: frame, urls: urls}));
         }, 100);
     } else {
