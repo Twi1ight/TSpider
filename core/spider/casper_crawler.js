@@ -9,18 +9,21 @@ var user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537
 var core = require('./core');
 var utils = require('utils');
 var fs = require('fs');
-var init_url, result_file, cookie_file, requested_count = 0, static_urls = [], requested_urls = [];
-var first_page_request = true;
+var init_url, result_file, cookie_file, block_navigation_url;
+var static_urls = [];
+var requested_urls = [];
 var max_frames = 0;
 var done_frames = 0;
-var timeout = 120000;
+var requested_count = 0;
+var time_per_event = 1000;
+var casper_timeout = 120000;
 var casper = require('casper').create({
     //clientScripts: [
     //    'jquery-2.2.4.min.js'      // These two scripts will be injected in remote
     //    'includes/underscore.js'   // DOM on every request
     //],
     viewportSize: {width: 800, height: 600},
-    timeout: timeout,
+    timeout: casper_timeout,
     pageSettings: {
         loadImages: false,           // The WebPage instance used by Casper will
         loadPlugins: false,          // use these settings
@@ -40,6 +43,9 @@ if (casper.cli.args.length === 1) {
     }
     if (casper.cli.has('cookie')) {
         cookie_file = casper.cli.get('cookie')
+    }
+    if (casper.cli.has('casper_timeout')) {
+        time_per_event = casper.cli.get('casper_timeout')
     }
 } else {
     casper.echo('usage: crawler.js http://foo.bar [--output=output.txt] [--cookie=cookie.txt]', 'INFO');
@@ -70,16 +76,11 @@ if (!!cookie_file) {
 casper.on('page.initialized', function (WebPage) {
     WebPage.evaluate(core.AddMutationObserver)
 });
-
-//page.resource.requested   Emitted when a new HTTP request is performed to open the required url.
-//resource.requested        Emitted when any resource has been requested.
-casper.on('page.resource.requested', function (requestData, request) {
-    if (first_page_request) {
-        first_page_request = false
-    } else {
-        request.abort();
-    }
-    //will continue to trigger resource.requested
+// navigation.requested     Emitted each time a navigation operation has been requested.
+// Available navigation types are: LinkClicked, FormSubmitted, BackOrForward, Reload, FormResubmitted and Other.
+casper.on('navigation.requested', function (url, navigationType, willNavigate, isMainFrame) {
+    if (navigationType !== "Other")
+        block_navigation_url = url;
 });
 
 casper.on('resource.requested', function (requestData, request) {
@@ -87,9 +88,10 @@ casper.on('resource.requested', function (requestData, request) {
     //this.echo(JSON.stringify(requestData),'INFO');
     //utils.dump(requestData);
     requested_urls.push(JSON.stringify(requestData));
-    var url = requestData.url;
-    if (core.evilResource(url)) {
-        this.echo(url + ' forbiden', 'ERROR');
+    if (core.evilResource(requestData.url)) {
+        request.abort()
+    } else if (block_navigation_url === requestData.url) {
+        block_navigation_url = null;
         request.abort()
     }
 });
@@ -119,7 +121,7 @@ casper.on('remote.message', function (msg) {
     if (msg.substr(0, data_signal_prefix.length) === data_signal_prefix) {
         var url = msg.substr(data_signal_prefix.length);
         static_urls.push(url);
-    }else if(msg.substr(0, exit_signal_prefix.length) === exit_signal_prefix){
+    } else if (msg.substr(0, exit_signal_prefix.length) === exit_signal_prefix) {
         var frame = msg.substr(exit_signal_prefix.length);
         this.echo(frame, 'ERROR');
         if (frame === 'iframe') {
@@ -136,7 +138,7 @@ casper.on('remote.message', function (msg) {
 
 casper.on('iframe.completed', function () {
     this.echo('mainframe evaluate', 'INFO');
-    this.evaluate(core.FireintheHole, 'mainframe')
+    this.evaluate(core.FireintheHole, 'mainframe', time_per_event)
 });
 
 casper.on('exit', function () {
@@ -166,15 +168,15 @@ casper.then(function () {
     } else {
         for (var index = 0; index < max_frames; index++) {
             this.withFrame(index, function () {
-                this.evaluate(core.FireintheHole, 'iframe')
+                this.evaluate(core.FireintheHole, 'iframe', time_per_event)
             })
         }
     }
 });
 
-casper.wait(timeout - 1000, function () {
-    // casper.capture('timeout.png');
-    this.echo('casper_crawler timeout!', 'ERROR');
+casper.wait(casper_timeout - 1000, function () {
+    // casper.capture('casper_timeout.png');
+    this.echo('casper_crawler casper_timeout!', 'ERROR');
 });
 
 casper.run();

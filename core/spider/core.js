@@ -1,12 +1,12 @@
 /**
  * Created by Twi1ight on 2016/7/30.
  */
+"use strict";
 var require = patchRequire(require);
 var utils = require('utils');
 var fs = require('fs');
 
 exports.evilResource = function (url) {
-    "use strict";
     var parser = document.createElement('a');
     parser.href = url;
     var filename = parser.pathname.replace(/^.*[\\\/]/, '');
@@ -27,14 +27,13 @@ exports.evilResource = function (url) {
 };
 
 exports.saveFile = function (static_urls, requested_urls, filename) {
-    "use strict";
     if (!filename) {
-        console.log('saveFile failed! no filename found!');
+        console.info('saveFile failed! no filename found!');
         //for (var j = 0; j < requested_urls.length; j++) {
-        //    console.log(requested_urls[j])
+        //    console.info(requested_urls[j])
         //}
         //for (j = 0; j < static_urls.length; j++) {
-        //    console.log(static_urls[j])
+        //    console.info(static_urls[j])
         //}
         return
     }
@@ -55,16 +54,16 @@ exports.AddMutationObserver = function () {
     var MutationObserver = window.MutationObserver;
     var callback = function (records) {
         records.forEach(function (record) {
-            // console.log('Mutation type: ', record.type);
+            // console.info('Mutation type: ', record.type);
             if (record.type === 'attributes') {
-                console.log("Mutation attributes:", record.target[record.attributeName]);
+                // console.info("Mutation attributes:", record.target[record.attributeName]);
                 window.LINKS.push(record.target[record.attributeName]);
             } else if (record.type === 'childList') {
                 for (var i = 0; i < record.addedNodes.length; ++i) {
                     var node = record.addedNodes[i];
                     if (node.src || node.href) {
                         window.LINKS.push(node.src || node.href);
-                        console.log('Mutation AddedNodes:', node.src || node.href);
+                        // console.info('Mutation AddedNodes:', node.src || node.href);
                     }
                 }
             }
@@ -85,14 +84,13 @@ exports.AddMutationObserver = function () {
         if (window.EVENTS_HISTORY.indexOf(hash) < 0) {
             window.EVENTS.push({"event": a, "element": this});
             window.EVENTS_HISTORY.unshift(hash);
-            console.log('addEventListener:', a, this);
+            console.info('addEventListener:', a, this);
         }
         this._addEventListener(a, b, c);
     };
 };
 
-exports.FireintheHole = function (frame) {
-    "use strict";
+exports.FireintheHole = function (frame, timeout) {
     var urls = [];
     var events = [];
     var events_func_str = [];
@@ -107,7 +105,7 @@ exports.FireintheHole = function (frame) {
         try {
             func();
         } catch (exception) {
-            console.log(func.name, exception)
+            console.info(func.name, exception)
         }
     }
 
@@ -153,7 +151,7 @@ exports.FireintheHole = function (frame) {
 
     function fillInputs() {
         var inputs = document.getElementsByTagName('input');
-        //console.log('get ' + inputs.length + ' inputs total');
+        //console.info('get ' + inputs.length + ' inputs total');
         //var requestdata = {};
         var buttons = [];
         for (var j = 0; j < inputs.length; j++) {
@@ -166,7 +164,7 @@ exports.FireintheHole = function (frame) {
                 continue;
             filled_inputs.push(pattern);
 
-            console.log('input => name: "' + obj.name + '" type: "' + obj.type + '" id: ' + obj.id);
+            console.info('input => name: "' + obj.name + '" type: "' + obj.type + '" id: ' + obj.id);
             switch (obj.type) {
                 //case 'hidden':
                 case 'submit':
@@ -221,7 +219,7 @@ exports.FireintheHole = function (frame) {
             if (filled_inputs.indexOf(spattern) >= 0)
                 continue;
             filled_inputs.push(spattern);
-            console.log('input => name: "' + s.name + '" type: ' + s.type + '" id: ' + s.id);
+            console.info('input => name: "' + s.name + '" type: ' + s.type + '" id: ' + s.id);
             s.selectedIndex = 1;
         }
         var button_elements = document.getElementsByTagName('button');
@@ -234,9 +232,9 @@ exports.FireintheHole = function (frame) {
     function getForms() {
         var buttons = fillInputs();
         var f = document.forms;
-        console.log('got total: ' + f.length + ' forms');
+        console.info('got total: ' + f.length + ' forms');
         for (var i = 0; i < f.length; i++) {
-            console.log('form-' + (i + 1) + ' total: ' + f.length);
+            console.info('form-' + (i + 1) + ' total: ' + f.length);
             var form = f[i];
             var action = form.action ? form.action : form.baseURI;
             var pattern = form.name + '|' + action;
@@ -244,11 +242,11 @@ exports.FireintheHole = function (frame) {
                 continue;
             submited_forms.push(pattern);
             var inputs = form.getElementsByTagName('input');
-            console.log('get ' + inputs.length + ' inputs from form-' + (i + 1));
+            console.info('get ' + inputs.length + ' inputs from form-' + (i + 1));
             var formdata = {};
             for (var j = 0; j < inputs.length; j++) {
                 var obj = inputs[j];
-                console.log(obj.name + ' ' + obj.type + ' ' + obj.id + ' ' + obj.value);
+                console.info(obj.name + ' ' + obj.type + ' ' + obj.id + ' ' + obj.value);
                 if (!obj.hasAttribute('type'))
                     continue;
                 if (obj.name && obj.value) {
@@ -260,7 +258,7 @@ exports.FireintheHole = function (frame) {
                 var request = form.method.toUpperCase() + '|||' + rmFragment(action) + '|||' + querystring + '|||' + rmFragment(form.baseURI);
                 if (urls.indexOf(request) < 0) {
                     urls.push(request);
-                    console.log(data_signal_prefix + request);
+                    console.info(data_signal_prefix + request);
                 }
 
             }
@@ -286,7 +284,7 @@ exports.FireintheHole = function (frame) {
                 var attr_value = attrs[j].nodeValue;
                 if (attr_name.substr(0, 2) === "on") {
                     if (events_func_str.indexOf(attr_value) < 0) {
-                        console.log(289, 'on*   ' + attr_value);
+                        console.info(289, 'on*   ' + attr_value);
                         events.unshift(attr_value);
                         events_func_str.unshift(attr_value);
                     }
@@ -295,7 +293,7 @@ exports.FireintheHole = function (frame) {
                     if (void_jscode.indexOf(attrs[j].nodeValue) >= 0)
                         continue;
                     if (events_func_str.indexOf(attr_value) < 0) {
-                        console.log(298, 'javascript: ' + attr_value);
+                        console.info(298, 'javascript: ' + attr_value);
                         events.unshift(attr_value);
                         events_func_str.unshift(attr_value);
                     }
@@ -318,7 +316,7 @@ exports.FireintheHole = function (frame) {
                 request = method + '|||' + rmFragment(url) + '|||null|||' + rmFragment(document.baseURI);
                 if (urls.indexOf(request) < 0) {
                     urls.push(request);
-                    console.log(data_signal_prefix + request);
+                    console.info(data_signal_prefix + request);
                 }
             }
         }
@@ -347,7 +345,7 @@ exports.FireintheHole = function (frame) {
         }
         while (window.top.LINKS.length > 0) {
             var url = window.top.LINKS.shift();
-            // console.log(312, url);
+            // console.info(312, url);
             if (void_jscode.indexOf(url) >= 0)
                 continue;
             if (validScheme(url)) {
@@ -356,7 +354,7 @@ exports.FireintheHole = function (frame) {
                 var request = 'GET' + '|||' + rmFragment(url) + '|||null|||' + rmFragment(document.baseURI);
                 if (urls.indexOf(request) < 0) {
                     urls.push(request);
-                    console.log(data_signal_prefix + request);
+                    console.info(data_signal_prefix + request);
                 }
             } else if (events_func_str.indexOf(url) < 0) {
                 events_func_str.push(url);
@@ -375,18 +373,17 @@ exports.FireintheHole = function (frame) {
         funcWithCatch(getStaticUrls);
         funcWithCatch(mainframe);
 
-        console.log("events.length ", events.length);
+        console.info("events.length ", events.length);
         if (events.length > 0) {
             try {
-                var timeout = 1000;
                 var local_events = ['mouseout', 'mouseover', 'mouseleave', 'mousemove', 'mouseenter', 'blur', 'focus'];
                 var event = events.shift();
                 if (typeof event === 'string') {
-                    console.log('string event ', event);
+                    console.info('string event ', event);
                     // eval(event)
                     runInFunc(event);
                 } else if (typeof event === 'object') {
-                    console.log('object event ', event["event"], event["element"].tagName);
+                    console.info('object event ', event["event"], event["element"].tagName);
                     if (local_events.indexOf(event['event']) >= 0)
                         timeout = 100;
                     var evt = document.createEvent('CustomEvent');
@@ -394,7 +391,7 @@ exports.FireintheHole = function (frame) {
                     event["element"].dispatchEvent(evt);
                 }
             } catch (exception) {
-                console.log('fireEvent exception:', exception)
+                console.info('fireEvent exception:', exception)
             }
             setTimeout(function () {
                 main()
@@ -402,7 +399,7 @@ exports.FireintheHole = function (frame) {
         } else {
             setTimeout(function () {
                 funcWithCatch(mainframe);
-                console.log(exit_signal_prefix + frame);
+                console.info(exit_signal_prefix + frame);
             }, 3000)
         }
     }
@@ -410,8 +407,8 @@ exports.FireintheHole = function (frame) {
     //if can't access window.top.LINKS, the frame is not same origin, skip it
     if (typeof window.top.LINKS === "undefined") {
         setTimeout(function () {
-            console.log('skip NOOOOOOOOOOOOOOOOT same origin frame');
-            console.log(exit_signal_prefix + frame);
+            console.info('skip NOOOOOOOOOOOOOOOOT same origin frame');
+            console.info(exit_signal_prefix + frame);
         }, 100);
     } else {
         main();
