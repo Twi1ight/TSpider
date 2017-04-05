@@ -1,5 +1,8 @@
 /**
  * Created by Twi1ight on 2016/7/30.
+ *
+ * Copyright (c) 2016-2017 twi1ight@t00ls.net (http://twi1ight.com/)
+ * See the file 'doc/COPYING' for copying permission
  */
 "use strict";
 var require = patchRequire(require);

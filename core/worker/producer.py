@@ -2,7 +2,8 @@
 # -*- coding:utf-8 -*-
 #
 """
-producer
+Copyright (c) 2016-2017 twi1ight@t00ls.net (http://twi1ight.com/)
+See the file 'doc/COPYING' for copying permission
 """
 import json
 
@@ -12,6 +13,7 @@ from core.utils.redis_utils import RedisUtils
 from core.utils.mongo_utils import MongoUtils
 from core.utils.url import URL
 from core.utils.log import logger
+from settings import DEFAULT_CRAWL_TLD, RedisConf, MongoConf
 
 
 class Producer(object):
@@ -35,11 +37,11 @@ class Producer(object):
         :return: :class:Producer object
         :rtype: Producer
         """
-        kwargs.setdefault('tld', True)
-        kwargs.setdefault('redis_db', 0)
+        kwargs.setdefault('tld', DEFAULT_CRAWL_TLD)
+        kwargs.setdefault('redis_db', RedisConf.db)
 
         self.tld = kwargs.get('tld')
-        self.mongo_db = kwargs.pop('mongo_db', 'tspider')
+        self.mongo_db = kwargs.pop('mongo_db', MongoConf.db)
         self.__kwargs = kwargs.copy()
         self.redis_utils = RedisUtils(**kwargs)
 

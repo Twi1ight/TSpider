@@ -3,6 +3,9 @@
 """
 Created on 2016/8/7 16:17
 add blacklist domain or subdomain in runtime
+
+Copyright (c) 2016-2017 twi1ight@t00ls.net (http://twi1ight.com/)
+See the file 'doc/COPYING' for copying permission
 """
 import sys
 

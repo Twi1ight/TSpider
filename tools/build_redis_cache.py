@@ -3,6 +3,9 @@
 #
 """
 buil scanned pattern cache for redis from mongodb
+
+Copyright (c) 2016-2017 twi1ight@t00ls.net (http://twi1ight.com/)
+See the file 'doc/COPYING' for copying permission
 """
 import sys
 

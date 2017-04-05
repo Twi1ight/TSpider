@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on 2016/7/27 23:26
+
+Copyright (c) 2016-2017 twi1ight@t00ls.net (http://twi1ight.com/)
+See the file 'doc/COPYING' for copying permission
 """
 import os
 import json
@@ -24,6 +27,7 @@ class SpiderPage(object):
     """
     Spider Page
     """
+
     def __init__(self, url, outfile=None, cookie_file=None):
         """
         :param url:

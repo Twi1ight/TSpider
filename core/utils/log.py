@@ -3,6 +3,9 @@
 #
 """
 https://github.com/jruere/multiprocessing-logging
+
+Copyright (c) 2016-2017 twi1ight@t00ls.net (http://twi1ight.com/)
+See the file 'doc/COPYING' for copying permission
 """
 import logging
 import logging.handlers
@@ -23,7 +26,7 @@ def install_mp_handler(logger=None):
 
     for i, orig_handler in enumerate(list(logger.handlers)):
         handler = MultiProcessingHandler(
-                'mp-handler-{0}'.format(i), sub_handler=orig_handler)
+            'mp-handler-{0}'.format(i), sub_handler=orig_handler)
 
         logger.removeHandler(orig_handler)
         logger.addHandler(handler)

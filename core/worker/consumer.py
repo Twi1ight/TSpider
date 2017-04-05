@@ -2,13 +2,15 @@
 # -*- coding:utf-8 -*-
 #
 """
-consumer
+Copyright (c) 2016-2017 twi1ight@t00ls.net (http://twi1ight.com/)
+See the file 'doc/COPYING' for copying permission
 """
 import time
 
 from core.spider.spider import SpiderPage
 from core.utils.log import logger
 from core.utils.redis_utils import RedisUtils
+from settings import RedisConf
 
 
 class Consumer(object):
@@ -18,7 +20,7 @@ class Consumer(object):
         :param cookie_file: cookie file used for spider, export from chrome by EditThisCookie plugin
         :return:
         """
-        kwargs.setdefault('redis_db', 0)
+        kwargs.setdefault('redis_db', RedisConf.db)
         self.__cookie_file = kwargs.pop('cookie_file', None)
         self.__kwargs = kwargs.copy()
         self.redis_utils = RedisUtils(**kwargs)

@@ -2,7 +2,8 @@
 # -*- coding:utf-8 -*-
 #
 """
-mongodb
+Copyright (c) 2016-2017 twi1ight@t00ls.net (http://twi1ight.com/)
+See the file 'doc/COPYING' for copying permission
 """
 from log import logger
 from settings import MongoConf
@@ -10,13 +11,14 @@ from pymongo import MongoClient
 
 
 class MongoUtils(object):
-    def __init__(self, connect=False, database='tspider', target_collection='targetresult',
-                 other_collection='otheresult'):
+    def __init__(self, connect=False, database=MongoConf.db,
+                 target_collection=MongoConf.target,
+                 others_collection=MongoConf.others):
         try:
             self._client = MongoClient('mongodb://{}:{}'.format(MongoConf.host, MongoConf.port),
                                        connect=connect)
             self._target = self._client[database][target_collection]
-            self._other = self._client[database][other_collection]
+            self._others = self._client[database][others_collection]
         except:
             logger.exception('connect mongodb failed!')
             self._client = None
@@ -41,7 +43,7 @@ class MongoUtils(object):
         if check_exists and self.exists(reqdict, is_target):
             return
         try:
-            handle = self._target if is_target else self._other
+            handle = self._target if is_target else self._others
             result = handle.insert_one(reqdict)
             if result.acknowledged:
                 logger.debug('insert success: %s' % str(result.inserted_id))
@@ -56,7 +58,7 @@ class MongoUtils(object):
         try:
             query = {'method': reqdict.get('method', ''),
                      'pattern': reqdict.get('pattern', '')}
-            handle = self._target if is_target else self._other
+            handle = self._target if is_target else self._others
             cursor = handle.find(query, limit=1)
             if cursor.count() > 0:
                 logger.debug('document exists: %s-%s' % (query['method'], query['pattern']))
@@ -69,7 +71,7 @@ class MongoUtils(object):
 
     def query(self, querystring, fields, is_target=True):
         try:
-            handle = self._target if is_target else self._other
+            handle = self._target if is_target else self._others
             cursor = handle.find(querystring, fields)
             for doc in cursor:
                 yield doc

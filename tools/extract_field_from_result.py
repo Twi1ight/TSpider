@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on 2016/8/13 16:59
+
+Copyright (c) 2016-2017 twi1ight@t00ls.net (http://twi1ight.com/)
+See the file 'doc/COPYING' for copying permission
 """
 import argparse
 import json

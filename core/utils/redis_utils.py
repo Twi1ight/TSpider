@@ -2,22 +2,23 @@
 # -*- coding:utf-8 -*-
 #
 """
-redis_task
+Copyright (c) 2016-2017 twi1ight@t00ls.net (http://twi1ight.com/)
+See the file 'doc/COPYING' for copying permission
 """
 import redis
-from settings import RedisConf, MAX_URL_REQUEST_PER_SITE
+from settings import RedisConf, MAX_URL_REQUEST_PER_SITE, DEFAULT_CRAWL_TLD
 from core.utils.log import logger
 
 
 class RedisUtils(object):
-    def __init__(self, tld=True,
-                 redis_db=0,
-                 l_url_task='spider:url:task',
-                 l_url_result='spider:url:result',
-                 h_url_saved='spider:url:saved',
-                 h_domain_whitelist='spider:domain:whitelist',
-                 h_domain_blacklist='spider:domain:blacklist',
-                 h_hostname_reqcount='spider:hostname:reqcount'):
+    def __init__(self, tld=DEFAULT_CRAWL_TLD,
+                 redis_db=RedisConf.db,
+                 l_url_task=RedisConf.tasks,
+                 l_url_result=RedisConf.result,
+                 h_url_saved=RedisConf.saved,
+                 h_domain_whitelist=RedisConf.whitelist,
+                 h_domain_blacklist=RedisConf.blacklist,
+                 h_hostname_reqcount=RedisConf.reqcount):
         """
         redis cache db {(redis_db+1)%15}
         multiple redis hash tables named by hostname and key is url path pattern used for check whether url was visited

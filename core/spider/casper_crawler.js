@@ -3,6 +3,9 @@
  * http://blog.wils0n.cn/?post=18
  *
  *  casperjs --ignore-ssl-errors=true --ssl-protocol=any casper_crawler.js http://foo.bar outfile
+ *
+ *  Copyright (c) 2016-2017 twi1ight@t00ls.net (http://twi1ight.com/)
+ *  See the file 'doc/COPYING' for copying permission
  */
 'use strict';
 var user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11";
@@ -44,11 +47,11 @@ if (casper.cli.args.length === 1) {
     if (casper.cli.has('cookie')) {
         cookie_file = casper.cli.get('cookie')
     }
-    if (casper.cli.has('casper_timeout')) {
-        time_per_event = casper.cli.get('casper_timeout')
+    if (casper.cli.has('timeout')) {
+        time_per_event = casper.cli.get('timeout')
     }
 } else {
-    casper.echo('usage: crawler.js http://foo.bar [--output=output.txt] [--cookie=cookie.txt]', 'INFO');
+    casper.echo('usage: crawler.js http://foo.bar [--output=output.txt] [--cookie=cookie.txt] [--timeout=1000]', 'INFO');
     casper.exit()
 }
 

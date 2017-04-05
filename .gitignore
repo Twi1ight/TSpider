@@ -121,5 +121,4 @@ fabric.properties
 .DS_Store
 *.html
 *.png
-subproc.js
 node_modules/
