@@ -146,7 +146,27 @@ console.log不管在mainframe还是childframe中都是可以用的，在casperjs
 
 ### 架构
 
-最核心的爬虫功能是用js写的，本身只是个单页爬虫，能抓取当前页面所有的链接。要抓取整站的url，还需要在外面包装一层任务调度。
+最核心的爬虫功能是用js写的，本身只是个单页爬虫，能抓取当前页面所有的链接。可以单独拿出来运行，路径在core/spider，核心文件是casper_crawler.js和core.js
+
+```bash
+Twi1ight at Mac-Pro in ~/Code/TSpider/core/spider (master)
+$ casperjs casper_crawler.js
+usage: crawler.js http://foo.bar [--output=output.txt] [--cookie=cookie.txt] [--timeout=1000]
+Twi1ight at Mac-Pro in ~/Code/TSpider/core/spider (master)
+$casperjs casper_crawler.js http://testphp.vulnweb.com/AJAX/index.php --output=out.txt
+find 0 iframes
+mainframe evaluate
+...
+remote message caught: events.length  1
+remote message caught: string event  javascript:getInfo('infoartist', '1')
+remote message caught: got total: 0 forms
+remote message caught: events.length  0
+mainframe
+requests: 20 urls: 29
+save urls to out.txt
+```
+
+要抓取整站的url，还需要在外面包装一层任务调度。
 
 现在调度器用python实现，任务消息和缓存队列用的redis，爬取结果存储使用mongodb
 

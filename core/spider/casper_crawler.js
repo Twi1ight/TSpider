@@ -2,7 +2,7 @@
  * Created by Twi1ight on 2016/7/28.
  * http://blog.wils0n.cn/?post=18
  *
- *  casperjs --ignore-ssl-errors=true --ssl-protocol=any casper_crawler.js http://foo.bar outfile
+ *  casperjs --ignore-ssl-errors=true --ssl-protocol=any casper_crawler.js http://foo.bar --output=outfile
  *
  *  Copyright (c) 2016-2017 twi1ight@t00ls.net (http://twi1ight.com/)
  *  See the file 'doc/COPYING' for copying permission
