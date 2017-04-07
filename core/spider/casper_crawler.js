@@ -90,6 +90,7 @@ casper.on('resource.requested', function (requestData, request) {
     requested_count++;
     //this.echo(JSON.stringify(requestData),'INFO');
     //utils.dump(requestData);
+    requestData['type'] = 'request';
     requested_urls.push(JSON.stringify(requestData));
     if (core.evilResource(requestData.url)) {
         request.abort()

@@ -11,59 +11,62 @@ from core.utils.log import logger
 
 
 class RedisUtils(object):
-    def __init__(self, tld=DEFAULT_CRAWL_TLD,
-                 redis_db=RedisConf.db,
-                 l_url_task=RedisConf.tasks,
-                 l_url_result=RedisConf.result,
-                 h_url_saved=RedisConf.saved,
-                 h_domain_whitelist=RedisConf.whitelist,
-                 h_domain_blacklist=RedisConf.blacklist,
-                 h_hostname_reqcount=RedisConf.reqcount):
+    def __init__(self, db=RedisConf.db, tld=DEFAULT_CRAWL_TLD):
         """
         redis cache db {(redis_db+1)%15}
         multiple redis hash tables named by hostname and key is url path pattern used for check whether url was visited
 
         :param tld: scan same top-level-domain subdomains. Scan only subdomain itself when tld=False.
-        :param redis_db: redis db number.
-        :param l_url_task: (optional) redis list, which spider get urls
-        :param l_url_result: (optional) redis list, which spider send result urls
-        :param h_url_saved: (optional) redis hash table, key named by {method}-{url_pattern}, values make no sense
-        :param h_domain_whitelist: (optional) redis hash table, domain/hostname in hkeys is allowed to scrap
-        :param h_domain_blacklist: (optional) redis hash table, domain/subdomain in hkeys is not allowed to scrap
-        :param h_hostname_reqcount: (optional) redis hash table, key named by hostname, url scrapped count in value
+        :param db: redis db number.
         :return: :class:RedisUtils object
         :rtype: RedisUtils
         """
-        self.redis_task = redis.StrictRedis(host=RedisConf.host, port=RedisConf.port,
-                                            db=redis_db, password=RedisConf.password)
-        cache_db = (redis_db + 1) % 15
-        # redis handle for cached url pattern
-        self.redis_cache = redis.StrictRedis(host=RedisConf.host, port=RedisConf.port,
-                                             db=cache_db, password=RedisConf.password)
-        self.l_url_task = l_url_task
-        self.l_url_result = l_url_result
-        self.h_url_saved = h_url_saved
-        self.h_domain_whitelist = h_domain_whitelist
-        self.h_domain_blacklist = h_domain_blacklist
-        self.h_hostname_reqcount = h_hostname_reqcount
-
+        self.db = db
         self.tld = tld
+        self.l_url_tasks = RedisConf.tasks
+        self.l_url_result = RedisConf.result
+        self.h_url_saved = RedisConf.saved
+        self.h_whitelist = RedisConf.whitelist
+        self.h_blocklist = RedisConf.blocklist
+        self.h_hostname_reqcount = RedisConf.reqcount
+        self.h_startup_params = RedisConf.startup_params
+        self.redis_task = None
+        self.redis_cache = None
+        self.connect()
 
     @property
     def connected(self):
         try:
             self.redis_task.ping()
+            self.redis_cache.ping()
             return True
         except:
             logger.exception('connect to redis failed!')
             return False
+
+    def connect(self):
+        try:
+            self.redis_task = redis.StrictRedis(host=RedisConf.host, port=RedisConf.port,
+                                                db=self.db, password=RedisConf.password,
+                                                socket_keepalive=True)
+            cache_db = (self.db + 1) % 15
+            # redis handle for cached url pattern
+            self.redis_cache = redis.StrictRedis(host=RedisConf.host, port=RedisConf.port,
+                                                 db=cache_db, password=RedisConf.password,
+                                                 socket_keepalive=True)
+        except:
+            logger.exception('connect redis failed!')
+
+    def close(self):
+        self.redis_task.connection_pool.disconnect()
+        self.redis_cache.connection_pool.disconnect()
 
     def fetch_one_task(self, timeout=0):
         """
         :param timeout: default 0, block mode
         :return:
         """
-        _, url = self.redis_task.brpop(self.l_url_task, timeout)
+        _, url = self.redis_task.brpop(self.l_url_tasks, timeout)
         return url
 
     def fetch_one_result(self, timeout=0):
@@ -85,7 +88,7 @@ class RedisUtils(object):
         """
         :return: The total number of left tasks
         """
-        return self.redis_task.llen(self.l_url_task)
+        return self.redis_task.llen(self.l_url_tasks)
 
     def insert_result(self, result):
         self.redis_task.lpush(self.l_url_result, result)
@@ -137,19 +140,19 @@ class RedisUtils(object):
         :return:
         """
         if self.tld:
-            return self.redis_task.hexists(self.h_domain_whitelist, url.domain)
+            return self.redis_task.hexists(self.h_whitelist, url.domain)
         else:
-            return self.redis_task.hexists(self.h_domain_whitelist, url.hostname)
+            return self.redis_task.hexists(self.h_whitelist, url.hostname)
 
-    def add_targetdomain(self, url):
+    def insert_to_whitelist(self, url):
         """
         :param url: URL class instance
         :return:
         """
         if self.tld:
-            self.redis_task.hsetnx(self.h_domain_whitelist, url.domain, '*')
+            self.redis_task.hsetnx(self.h_whitelist, url.domain, '*')
         else:
-            self.redis_task.hsetnx(self.h_domain_whitelist, url.hostname, '*')
+            self.redis_task.hsetnx(self.h_whitelist, url.hostname, '*')
 
     def create_task_from_url(self, url, add_whitelist=True, valid_url_check=True):
         """
@@ -161,9 +164,9 @@ class RedisUtils(object):
         if valid_url_check and not self.valid_task_url(url): return
 
         logger.info('add task: %s' % url.urlstring)
-        self.redis_task.lpush(self.l_url_task, url.urlstring)
+        self.redis_task.lpush(self.l_url_tasks, url.urlstring)
         # add targetdomain
-        if add_whitelist: self.add_targetdomain(url)
+        if add_whitelist: self.insert_to_whitelist(url)
         # set scanned hash table
         self.set_url_scanned(url)
         # incr req count
@@ -193,21 +196,20 @@ class RedisUtils(object):
             logger.debug('%s max req count reached!' % url.hostname)
             return False
 
-        if self.is_blacklist_domain(url):
+        if self.is_blocked(url):
             logger.debug('%s is blacklist domain!' % url.hostname)
             return False
 
         return True
 
-    def is_blacklist_domain(self, url):
+    def is_blocked(self, url):
         """
-        hostname is in blacklist domain
         :param url: :class:URL object
         :return: bool
         :rtype: bool
         """
         hostname, domain = url.hostname, url.domain
-        if self.redis_task.hexists(self.h_domain_blacklist, domain): return True
+        if self.redis_task.hexists(self.h_blocklist, domain): return True
         if hostname == domain: return False
 
         # a.b.c.d.test.com => a.b.c.d
@@ -217,12 +219,28 @@ class RedisUtils(object):
         for i in range(len(prefix_splits)):
             pre = '.'.join(prefix_splits[i:])
             name = '{}.{}'.format(pre, domain)
-            if self.redis_task.hexists(self.h_domain_blacklist, name): return True
+            if self.redis_task.hexists(self.h_blocklist, name): return True
         return False
 
-    def add_blacklist_domain(self, domain):
+    def add_blocklist(self, dnsname):
         """
-        :param domain:
+        :param dnsname:
         :return:
         """
-        self.redis_task.hsetnx(self.h_domain_blacklist, domain, '*')
+        self.redis_task.hsetnx(self.h_blocklist, dnsname, '*')
+
+    def save_startup_params(self, args):
+        self.redis_task.hset(self.h_startup_params, 'tld', args.tld)
+        self.redis_task.hset(self.h_startup_params, 'cookie_file', args.cookie_file)
+        self.redis_task.hset(self.h_startup_params, 'consumer', args.consumer)
+        self.redis_task.hset(self.h_startup_params, 'producer', args.producer)
+        self.redis_task.hset(self.h_startup_params, 'mongo_db', args.mongo_db)
+
+    def restore_startup_params(self, args):
+        v = self.redis_task.hget(self.h_startup_params, 'tld')
+        args.tld = True if v == 'True' else False
+        v = self.redis_task.hget(self.h_startup_params, 'cookie_file')
+        args.cookie_file = None if v == 'None' else v
+        args.consumer = int(self.redis_task.hget(self.h_startup_params, 'consumer'))
+        args.producer = int(self.redis_task.hget(self.h_startup_params, 'producer'))
+        args.mongo_db = self.redis_task.hget(self.h_startup_params, 'mongo_db')

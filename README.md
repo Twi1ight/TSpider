@@ -202,6 +202,41 @@ Database:
   --mongo-db STRING     Mongodb database name, default "tspider"
   --redis-db NUMBER     Redis db index, N for task queue and N+1 for cache, default 0
 ```
+```
+python tspider -u http://www.qq.com --cookie-file=qq.txt -c 10 -p 2 --tld --mongo-db qq --redis-db 10
+新建爬虫任务，爬取www.qq.com；指定了--tld，所以会同时爬取所有获得的子域名；启动10个爬虫；结果存到qq数据库中，redis中使用10号库为任务队列，11号库为缓存队列
+
+python tspider --continue --redis-db 10
+从10号库中恢复上次扫描任务
+```
+
+consumer从redis任务队列中取任务进行爬取，对应的是启动多少个casperjs实例。
+
+producer从redis缓存结果队列中取爬虫结果，将结果存到mongodb中，并将没有爬取过的url放到任务队列中继续扫描。
+
+所有目标站点扫描结果存放在target表中，非目标站点的扫描结果存放在others中。
+
+每个扫描结果包含method，url，postdata，headers，type字段。其中type字段取值为static或request，static表示从网页静态分析得到的结果，request表示拦截web访问得到的结果。
+
+从MongoDB中导出扫描结果：
+
+```
+mongoexport -d qq -c target -f method,url,postdata,headers,type -o qq-urls.txt
+```
+
+单条结果示例：
+
+```
+{ "_id" : { "$oid" : "57bfc507a640db2a798bd108" }, "postdata" : "fields=avatar_url,nickname,cellphone,t1_gift", "type" : "request", "url" : "http://www.qq.com/store/index.php?r=Account/IsLogin", "headers" : { "Origin" : "http://www.qq.com", "Content-Type" : "application/x-www-form-urlencoded;charset=UTF-8", "Referer" : "http://www.qq.com/" }, "method" : "POST" }
+```
+
+有些域名存在很多无关信息，比如www.taobao.com或者mirrors.163.com之类的，这类域名在扫描时不希望爬虫去抓取，所以在tools目录下有一个脚本block_domain.py，用于添加域名黑名单，阻止爬虫爬取指定主域名或子域名
+
+```
+$ python -m tools.block_domain
+usage: block_domain.py db target.com
+```
+
 ## TODO
 
 - 添加POST支持

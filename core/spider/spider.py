@@ -94,41 +94,39 @@ class SpiderPage(object):
             logger.error('no spider result file found!')
             return []
 
-        urls = []
+        fingerprints = []
         # with os.fdopen(fptr) as f:
         with open(spiderfile) as f:
             for line in f:
                 line = line.strip()
                 try:
                     request = json.loads(line)
-                except:
-                    method, url, postdata, referer = line.split('|||')
-                    postdata = '' if postdata == 'null' else postdata
-                    headers = {'Referer': referer}
-                    source = 'static'
-                else:
                     method = request['method']
                     url = request['url']
                     postdata = request.get('postData', '')
+                    type_ = request['type']
                     headers = {}
                     for header in request['headers']:
                         headers[header['name']] = header['value']
                     headers.pop('Content-Length', '')
                     headers.pop('User-Agent', '')
                     headers.pop('Accept', '')
-                    source = 'request'
+                except:
+                    logger.exception('json.loads failed!')
+                    continue
+
                 # check urls fingerprint
                 fp = '%s|%s' % (method, url)
-                if fp in urls:
+                if fp in fingerprints:
                     continue
-                urls.append(fp)
+                fingerprints.append(fp)
 
                 data = {
                     'method': method,
                     'url': url,
                     'postdata': postdata,
                     'headers': headers,
-                    'source': source
+                    'type': type_
                 }
                 # print json.dumps(data)
                 self._results.append(json.dumps(data))

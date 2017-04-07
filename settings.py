@@ -32,12 +32,13 @@ class RedisConf(object):
     db = 0
     # list
     saved = 'spider:url:saved'
-    tasks = 'spider:url:task'
+    tasks = 'spider:url:tasks'
     result = 'spider:url:result'
     # hash
     reqcount = 'spider:hostname:reqcount'
     whitelist = 'spider:domain:whitelist'
-    blacklist = 'spider:domain:blacklist'
+    blocklist = 'spider:domain:blocklist'
+    startup_params = 'spider:startup:params'
 
 
 class MongoConf(object):

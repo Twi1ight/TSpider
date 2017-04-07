@@ -12,6 +12,7 @@ import argparse
 from multiprocessing import Process
 
 from core.utils.log import logger
+from core.utils.redis_utils import RedisUtils
 from core.utils.url import URL
 from core.worker.consumer import Consumer
 from core.worker.producer import Producer
@@ -43,41 +44,49 @@ def cmdparse():
                     help='Mongodb database name, default "tspider"')
     db.add_argument('--redis-db', metavar='NUMBER', dest='redis_db', type=int, default=RedisConf.db,
                     help='Redis db index, N for task queue and N+1 for cache, default 0')
-    arg = parser.parse_args()
-    if not any([arg.url, arg.file, arg.keepon]):
+    args = parser.parse_args()
+    if not any([args.url, args.file, args.keepon]):
         parser.exit(parser.format_help())
-    return arg
+    return args
 
 
 if __name__ == '__main__':
-    arg = cmdparse()
-    tld_enable = arg.tld
+    args = cmdparse()
     producer_pool = []
     consumer_pool = []
-    for _ in range(arg.consumer):
-        worker = Consumer(redis_db=arg.redis_db, cookie_file=arg.cookie_file).consume
+    redis_handle = RedisUtils(db=args.redis_db)
+    if args.keepon:
+        redis_handle.restore_startup_params(args)
+        logger.info(args)
+
+    kwargs = {'tld': args.tld, 'cookie_file': args.cookie_file,
+              'redis_db': args.redis_db, 'mongo_db': args.mongo_db}
+    for _ in range(args.consumer):
+        worker = Consumer(**kwargs).consume
         proc = Process(name='consumer-%d' % _, target=worker)
         proc.start()
         consumer_pool.append(proc)
-    for _ in range(arg.producer):
-        worker = Producer(tld=tld_enable, mongo_db=arg.mongo_db, redis_db=arg.redis_db).produce
+    for _ in range(args.producer):
+        worker = Producer(**kwargs).produce
         proc = Process(name='producer-%d' % _, target=worker)
         proc.start()
         producer_pool.append(proc)
 
-    if not arg.keepon:
-        target = arg.url or arg.file
-        producer = Producer(tld=tld_enable, mongo_db=arg.mongo_db, redis_db=arg.redis_db)
-        if isinstance(target, str):
+    if not args.keepon:
+        redis_handle.save_startup_params(args)
+        target = args.url or args.file
+        producer = Producer(**kwargs)
+        if isinstance(target, basestring):
             url = URL(target)
             if not url.valid or url.blocked:
                 logger.error('not valid url, exit.')
                 sys.exit(-1)
-            producer.redis_utils.create_task_from_url(url)
+            producer.create_task_from_url(url)
         # file object
         else:
             with target:
                 producer.create_task_from_file(target)
 
+    redis_handle.close()
     map(lambda x: x.join(), consumer_pool)
     map(lambda x: x.join(), producer_pool)

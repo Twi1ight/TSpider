@@ -10,43 +10,39 @@ import time
 from core.spider.spider import SpiderPage
 from core.utils.log import logger
 from core.utils.redis_utils import RedisUtils
-from settings import RedisConf
 
 
 class Consumer(object):
     def __init__(self, **kwargs):
         """
-        :param redis_db: redis db index. N for task queue and N+1 for cache.
-        :param cookie_file: cookie file used for spider, export from chrome by EditThisCookie plugin
-        :return:
+        :return: :class:Consumer object
+        :rtype: Consumer
         """
-        kwargs.setdefault('redis_db', RedisConf.db)
-        self.__cookie_file = kwargs.pop('cookie_file', None)
-        self.__kwargs = kwargs.copy()
-        self.redis_utils = RedisUtils(**kwargs)
+        self.__cookie_file = kwargs.pop('cookie_file')
+        self.redis_handle = RedisUtils(tld=kwargs.pop('tld'), db=kwargs.pop('redis_db'))
 
     def consume(self):
-        if not self.redis_utils.connected:
+        if not self.redis_handle.connected:
             logger.error('no redis connection found in consumer! exit.')
             return
 
         while True:
             try:
-                url = self.redis_utils.fetch_one_task()
+                url = self.redis_handle.fetch_one_task()
                 logger.info('get task url: %s' % url)
-                logger.info('%d tasks left' % self.redis_utils.task_counts)
+                logger.info('%d tasks left' % self.redis_handle.task_counts)
                 self.start_spider(url, self.__cookie_file)
             except:
                 logger.exception('consumer exception!')
-                if not self.redis_utils.connected:
+                if not self.redis_handle.connected:
                     logger.error('redis disconnected! reconnecting...')
-                    self.redis_utils = RedisUtils(**self.__kwargs)
+                    self.redis_handle.connect()
                 time.sleep(10)
 
     def start_spider(self, url, cookie_file=None):
         results = SpiderPage(url, cookie_file=cookie_file).spider()
         for _ in results:
-            self.redis_utils.insert_result(_)
+            self.redis_handle.insert_result(_)
 
 
 if __name__ == '__main__':

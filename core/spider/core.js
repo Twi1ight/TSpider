@@ -258,12 +258,18 @@ exports.FireintheHole = function (frame, timeout) {
             }
             var querystring = param(formdata);
             if (querystring) {
-                var request = form.method.toUpperCase() + '|||' + rmFragment(action) + '|||' + querystring + '|||' + rmFragment(form.baseURI);
+                var data = {
+                    'method': form.method.toUpperCase(),
+                    'url': rmFragment(action),
+                    'postData': querystring,
+                    'headers': [{'name': 'Referer', 'value': rmFragment(form.baseURI)}],
+                    'type': 'static'
+                };
+                var request = JSON.stringify(data);
                 if (urls.indexOf(request) < 0) {
                     urls.push(request);
                     console.info(data_signal_prefix + request);
                 }
-
             }
             form.submit();
         }
@@ -287,53 +293,40 @@ exports.FireintheHole = function (frame, timeout) {
                 var attr_value = attrs[j].nodeValue;
                 if (attr_name.substr(0, 2) === "on") {
                     if (events_func_str.indexOf(attr_value) < 0) {
-                        console.info(289, 'on*   ' + attr_value);
+                        console.info(296, 'on*   ' + attr_value);
                         events.unshift(attr_value);
                         events_func_str.unshift(attr_value);
                     }
                 }
-                if (attr_name in {"src": 1, "href": 1} && attrs[j].nodeValue.substr(0, 11) === "javascript:") {
-                    if (void_jscode.indexOf(attrs[j].nodeValue) >= 0)
-                        continue;
-                    if (events_func_str.indexOf(attr_value) < 0) {
-                        console.info(298, 'javascript: ' + attr_value);
-                        events.unshift(attr_value);
-                        events_func_str.unshift(attr_value);
+                if (attr_name in {"src": 1, "href": 1}) {
+                    if (attr_value.substr(0, 11) === "javascript:") {
+                        if (void_jscode.indexOf(attr_value) >= 0)
+                            continue;
+                        if (events_func_str.indexOf(attr_value) < 0) {
+                            console.info(306, 'javascript: ' + attr_value);
+                            events.unshift(attr_value);
+                            events_func_str.unshift(attr_value);
+                        }
+                    } else {
+                        var url = attr_value;
+                        if (url && validScheme(url) && url.length < 1024) {
+                            var data = {
+                                'method': 'GET',
+                                'url': rmFragment(url),
+                                'postData': '',
+                                'headers': [{'name': 'Referer', 'value': rmFragment(document.baseURI)}],
+                                'type': 'static'
+                            };
+                            var request = JSON.stringify(data);
+                            if (urls.indexOf(request) < 0) {
+                                urls.push(request);
+                                console.info(data_signal_prefix + request);
+                            }
+                        }
                     }
                 }
             }
         }
-    }
-
-    function handleTag(tag, src) {
-        var elements = document.getElementsByTagName(tag);
-        for (var i = 0; i < elements.length; i++) {
-            //skip logout url
-            if (logout_text.indexOf(elements[i].innerText) >= 0)
-                continue;
-            var method, referer, url, request;
-            method = 'GET';
-            referer = window.location.href;
-            url = elements[i][src];
-            if (url && validScheme(url) && url.length < 1024) {
-                request = method + '|||' + rmFragment(url) + '|||null|||' + rmFragment(document.baseURI);
-                if (urls.indexOf(request) < 0) {
-                    urls.push(request);
-                    console.info(data_signal_prefix + request);
-                }
-            }
-        }
-    }
-
-    //get href
-    function getStaticUrls() {
-        handleTag('a', 'href');
-        handleTag('link', 'href');
-        handleTag('area', 'href');
-        handleTag('img', 'src');
-        handleTag('embed', 'src');
-        handleTag('video', 'src');
-        handleTag('audio', 'src');
     }
 
 
@@ -351,10 +344,17 @@ exports.FireintheHole = function (frame, timeout) {
             // console.info(312, url);
             if (void_jscode.indexOf(url) >= 0)
                 continue;
-            if (validScheme(url)) {
+            if (url && validScheme(url)) {
                 if (url.length > 1024)
                     continue;
-                var request = 'GET' + '|||' + rmFragment(url) + '|||null|||' + rmFragment(document.baseURI);
+                var data = {
+                    'method': 'GET',
+                    'url': rmFragment(url),
+                    'postData': '',
+                    'headers': [{'name': 'Referer', 'value': rmFragment(document.baseURI)}],
+                    'type': 'static'
+                };
+                var request = JSON.stringify(data);
                 if (urls.indexOf(request) < 0) {
                     urls.push(request);
                     console.info(data_signal_prefix + request);
@@ -371,9 +371,8 @@ exports.FireintheHole = function (frame, timeout) {
 
     function main() {
         funcWithCatch(getEvents);
-        funcWithCatch(getStaticUrls);
         funcWithCatch(getForms);
-        funcWithCatch(getStaticUrls);
+        funcWithCatch(getEvents);
         funcWithCatch(mainframe);
 
         console.info("events.length ", events.length);

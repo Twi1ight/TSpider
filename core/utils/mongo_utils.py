@@ -11,17 +11,12 @@ from pymongo import MongoClient
 
 
 class MongoUtils(object):
-    def __init__(self, connect=False, database=MongoConf.db,
-                 target_collection=MongoConf.target,
-                 others_collection=MongoConf.others):
-        try:
-            self._client = MongoClient('mongodb://{}:{}'.format(MongoConf.host, MongoConf.port),
-                                       connect=connect)
-            self._target = self._client[database][target_collection]
-            self._others = self._client[database][others_collection]
-        except:
-            logger.exception('connect mongodb failed!')
-            self._client = None
+    def __init__(self, db=MongoConf.db):
+        self.db = db
+        self._client = None
+        self._target = None
+        self._others = None
+        self.connect()
 
     @property
     def connected(self):
@@ -31,6 +26,15 @@ class MongoUtils(object):
         except:
             logger.exception('mongodb connection test excepiton!')
             return False
+
+    def connect(self):
+        try:
+            self._client = MongoClient('mongodb://{}:{}'.format(MongoConf.host, MongoConf.port),
+                                       connect=False)
+            self._target = self._client[self.db][MongoConf.target]
+            self._others = self._client[self.db][MongoConf.others]
+        except:
+            logger.exception('connect mongodb failed!')
 
     def save(self, reqdict, is_target=True, check_exists=False):
         if not self._client:
