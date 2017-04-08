@@ -116,39 +116,22 @@ class URL(object):
         return urlparse.urljoin(self.urlstring, '/', allow_fragments=False)
 
     @property
-    def url_pattern(self):
+    def pattern(self):
         """
-        use by producer to query whether url is storred in mongodb
         :return:
         """
-        return urlparse.urlunsplit((self.scheme, self.netloc, self.path_param_pattern, '', ''))
-
-    def url_pattern_with_method(self, method):
-        """
-        for producer to query whether url is saved to redis
-        replace url_pattern for performace
-        :return:
-        """
-        url_pattern = urlparse.urlunsplit((self.scheme, self.netloc, self.path_param_pattern, '', ''))
-        return '{}-{}'.format(method, url_pattern)
+        return urlparse.urlunsplit((self.scheme, self.netloc, self.path_querystring_pattern, '', ''))
 
     @property
-    def path_param_pattern(self):
+    def path_querystring_pattern(self):
         """
-        used by spider to query whether url is scanned
-        stored in redis hashtable '{scheme://netloc}'
         :return:
         """
-        path_pattern = re.sub('\d+', 'd+', self.path)
+        # TODO url pattern
+        path_pattern = re.sub('\d+', '{digit}', self.path)
         query_params = '<>'.join(sorted(self.querydict.keys()))
         pattern = '{}?{}'.format(path_pattern, query_params) if query_params else path_pattern
         return pattern
-
-    @property
-    def scanned_table(self):
-        # return '{}://{}'.format(self.scheme, self.netloc)
-        # some sites are available with both http and https
-        return self.netloc
 
     @property
     def blocked(self):
@@ -158,5 +141,5 @@ class URL(object):
 if __name__ == '__main__':
     urlstring = 'http://www.test.com/fuck/kjskdjf.php?args=kjsdfu&k=kuc&ii=ksc#skdf'
     url = URL(urlstring)
-    print url.path_param_pattern
-    print url.url_pattern
+    print url.path_querystring_pattern
+    print url.pattern

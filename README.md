@@ -70,6 +70,9 @@ MutationObserver Support: true
 大部分设置在settings.py中
 
 ```python
+MAX_URL_REQUEST_PER_SITE = 100 #每个站点最多允许爬取页面数量
+CASPERJS_TIMEOUT = 120 #casperjs进程最大运行时间
+
 class RedisConf(object):
     host = '127.0.0.1'
     port = 6379
@@ -78,12 +81,14 @@ class RedisConf(object):
     db = 0
     # list
     saved = 'spider:url:saved'
-    tasks = 'spider:url:task'
+    tasks = 'spider:url:tasks'
     result = 'spider:url:result'
     # hash
+    scanned = 'spider:url:scanned'
     reqcount = 'spider:hostname:reqcount'
     whitelist = 'spider:domain:whitelist'
     blacklist = 'spider:domain:blacklist'
+    startup_params = 'spider:startup:params'
 
 
 class MongoConf(object):
@@ -200,11 +205,11 @@ Database:
   [optional] options for redis and mongodb
 
   --mongo-db STRING     Mongodb database name, default "tspider"
-  --redis-db NUMBER     Redis db index, N for task queue and N+1 for cache, default 0
+  --redis-db NUMBER     Redis db index, default 0
 ```
 ```
 python tspider -u http://www.qq.com --cookie-file=qq.txt -c 10 -p 2 --tld --mongo-db qq --redis-db 10
-新建爬虫任务，爬取www.qq.com；指定了--tld，所以会同时爬取所有获得的子域名；启动10个爬虫；结果存到qq数据库中，redis中使用10号库为任务队列，11号库为缓存队列
+新建爬虫任务，爬取www.qq.com；指定了--tld，所以会同时爬取所有获得的子域名；启动10个爬虫；结果存到qq数据库，redis使用10号库
 
 python tspider --continue --redis-db 10
 从10号库中恢复上次扫描任务
@@ -226,8 +231,20 @@ mongoexport -d qq -c target -f method,url,postdata,headers,type -o qq-urls.txt
 
 单条结果示例：
 
-```
-{ "_id" : { "$oid" : "57bfc507a640db2a798bd108" }, "postdata" : "fields=avatar_url,nickname,cellphone,t1_gift", "type" : "request", "url" : "http://www.qq.com/store/index.php?r=Account/IsLogin", "headers" : { "Origin" : "http://www.qq.com", "Content-Type" : "application/x-www-form-urlencoded;charset=UTF-8", "Referer" : "http://www.qq.com/" }, "method" : "POST" }
+```json
+{
+	"_id" : ObjectId("58e86357191b36004ba26268"),
+	"domain" : "aisec.cn",
+	"postdata" : "",
+	"url" : "http://demo.aisec.cn/demo/aisec/",
+	"pattern" : "http://demo.aisec.cn/demo/aisec/",
+	"hostname" : "demo.aisec.cn",
+	"headers" : {
+		"Referer" : "http://demo.aisec.cn/demo/aisec/"
+	},
+	"type" : "request",
+	"method" : "GET"
+}
 ```
 
 有些域名存在很多无关信息，比如www.taobao.com或者mirrors.163.com之类的，这类域名在扫描时不希望爬虫去抓取，所以在tools目录下有一个脚本block_domain.py，用于添加域名黑名单，阻止爬虫爬取指定主域名或子域名

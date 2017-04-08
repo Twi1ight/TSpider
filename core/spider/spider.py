@@ -101,7 +101,7 @@ class SpiderPage(object):
                 line = line.strip()
                 try:
                     request = json.loads(line)
-                    method = request['method']
+                    method = request['method'].upper()
                     url = request['url']
                     postdata = request.get('postData', '')
                     type_ = request['type']

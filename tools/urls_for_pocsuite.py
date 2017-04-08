@@ -34,7 +34,7 @@ def process(filename):
             url = URL(line)
             if not url.valid: continue
             netloc = url.netloc
-            pattern = url.url_pattern
+            pattern = url.pattern
             if pattern not in data[netloc]:
                 data[netloc][pattern] = url.urlstring
     return data

@@ -64,17 +64,15 @@ class Producer(object):
             return
         url = URL(urlstring)
 
-        # save to mongodb
-        data.update({'pattern': url.url_pattern,
-                     'hostname': url.hostname,
-                     'domain': url.domain
-                     })
-
         method = data.get('method', '')
         if not method:
             logger.error('not method found!')
             return
-
+        # save to mongodb
+        data.update({'pattern': url.pattern,
+                     'hostname': url.hostname,
+                     'domain': url.domain
+                     })
         target = self.redis_handle.is_target(url)
 
         if not self.redis_handle.is_url_saved(method, url):

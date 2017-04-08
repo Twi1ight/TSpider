@@ -19,7 +19,7 @@ class Consumer(object):
         :rtype: Consumer
         """
         self.__cookie_file = kwargs.pop('cookie_file')
-        self.redis_handle = RedisUtils(tld=kwargs.pop('tld'), db=kwargs.pop('redis_db'))
+        self.redis_handle = RedisUtils(db=kwargs.pop('redis_db'), tld=kwargs.pop('tld'))
 
     def consume(self):
         if not self.redis_handle.connected:

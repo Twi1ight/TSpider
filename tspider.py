@@ -43,7 +43,7 @@ def cmdparse():
     db.add_argument('--mongo-db', metavar='STRING', dest='mongo_db', default=MongoConf.db,
                     help='Mongodb database name, default "tspider"')
     db.add_argument('--redis-db', metavar='NUMBER', dest='redis_db', type=int, default=RedisConf.db,
-                    help='Redis db index, N for task queue and N+1 for cache, default 0')
+                    help='Redis db index, default 0')
     args = parser.parse_args()
     if not any([args.url, args.file, args.keepon]):
         parser.exit(parser.format_help())
@@ -73,6 +73,7 @@ if __name__ == '__main__':
         producer_pool.append(proc)
 
     if not args.keepon:
+        redis_handle.flushdb()
         redis_handle.save_startup_params(args)
         target = args.url or args.file
         producer = Producer(**kwargs)

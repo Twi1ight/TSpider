@@ -39,7 +39,7 @@ if __name__ == '__main__':
     r = RedisUtils(db=db)
     r.add_blocklist(domain)
 
-    if r.redis_task.hexists(r.h_blocklist, domain):
+    if r.redis_client.hexists(r.h_blocklist, domain):
         remove_from_tasklist(domain)
         print 'add success!'
     else:

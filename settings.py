@@ -21,7 +21,6 @@ PSL_FILE_PATH = os.path.join(MODULE_PATH, 'core/utils/public_suffix_list.dat')
 
 MAX_URL_REQUEST_PER_SITE = 100
 CASPERJS_TIMEOUT = 120
-DEFAULT_CRAWL_TLD = True
 
 
 class RedisConf(object):
@@ -35,6 +34,7 @@ class RedisConf(object):
     tasks = 'spider:url:tasks'
     result = 'spider:url:result'
     # hash
+    scanned = 'spider:url:scanned'
     reqcount = 'spider:hostname:reqcount'
     whitelist = 'spider:domain:whitelist'
     blocklist = 'spider:domain:blocklist'
