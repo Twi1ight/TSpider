@@ -122,12 +122,16 @@ exports.FireintheHole = function (frame, timeout) {
         return false
     }
 
-    function startsWith(str, sub) {
-        return str.lastIndexOf(sub, 0) === 0
+    function normalizeUrl(url) {
+        if (!url)
+            return '';
+        if (startsWith(url, '//'))
+            url = window.location.protocol + url;
+        return url.split('#')[0]
     }
 
-    function rmFragment(url) {
-        return url ? url.split('#')[0] : ''
+    function startsWith(str, sub) {
+        return str.lastIndexOf(sub, 0) === 0
     }
 
     function rndStr(length) {
@@ -260,9 +264,9 @@ exports.FireintheHole = function (frame, timeout) {
             if (querystring) {
                 var data = {
                     'method': form.method.toUpperCase(),
-                    'url': rmFragment(action),
+                    'url': normalizeUrl(action),
                     'postData': querystring,
-                    'headers': [{'name': 'Referer', 'value': rmFragment(form.baseURI)}],
+                    'headers': [{'name': 'Referer', 'value': normalizeUrl(form.baseURI)}],
                     'type': 'static'
                 };
                 var request = JSON.stringify(data);
@@ -312,9 +316,9 @@ exports.FireintheHole = function (frame, timeout) {
                         if (url && validScheme(url) && url.length < 1024) {
                             var data = {
                                 'method': 'GET',
-                                'url': rmFragment(url),
+                                'url': normalizeUrl(url),
                                 'postData': '',
-                                'headers': [{'name': 'Referer', 'value': rmFragment(document.baseURI)}],
+                                'headers': [{'name': 'Referer', 'value': normalizeUrl(document.baseURI)}],
                                 'type': 'static'
                             };
                             var request = JSON.stringify(data);
@@ -349,9 +353,9 @@ exports.FireintheHole = function (frame, timeout) {
                     continue;
                 var data = {
                     'method': 'GET',
-                    'url': rmFragment(url),
+                    'url': normalizeUrl(url),
                     'postData': '',
-                    'headers': [{'name': 'Referer', 'value': rmFragment(document.baseURI)}],
+                    'headers': [{'name': 'Referer', 'value': normalizeUrl(document.baseURI)}],
                     'type': 'static'
                 };
                 var request = JSON.stringify(data);
@@ -386,8 +390,11 @@ exports.FireintheHole = function (frame, timeout) {
                     runInFunc(event);
                 } else if (typeof event === 'object') {
                     console.info('object event ', event["event"], event["element"].tagName);
-                    if (local_events.indexOf(event['event']) >= 0)
-                        timeout = 100;
+                    if (local_events.indexOf(event['event']) >= 0) {
+                        timeout = 100
+                    } else {
+                        timeout = 1000;
+                    }
                     var evt = document.createEvent('CustomEvent');
                     evt.initCustomEvent(event["event"], true, true, null);
                     event["element"].dispatchEvent(evt);

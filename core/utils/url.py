@@ -55,7 +55,7 @@ class URL(object):
                 return 'http://{}'.format(url)
         # //www.test.com/index.php
         if not p.scheme:
-            url = urlparse.urlunsplit(('http', p.netloc, p.path or '/',
+            url = urlparse.urlunparse(('http', p.netloc, p.path or '/',
                                        p.query, p.params, p.fragment))
         return url
 
@@ -140,6 +140,7 @@ class URL(object):
 
 if __name__ == '__main__':
     urlstring = 'http://www.test.com/fuck/kjskdjf.php?args=kjsdfu&k=kuc&ii=ksc#skdf'
+    # urlstring = '//mat1.gtimg.com/www/icon/favicon2.ico'
     url = URL(urlstring)
     print url.path_querystring_pattern
     print url.pattern

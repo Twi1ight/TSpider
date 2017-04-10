@@ -85,8 +85,7 @@ if __name__ == '__main__':
             producer.create_task_from_url(url)
         # file object
         else:
-            with target:
-                producer.create_task_from_file(target)
+            producer.create_task_from_file(target)
 
     redis_handle.close()
     map(lambda x: x.join(), consumer_pool)

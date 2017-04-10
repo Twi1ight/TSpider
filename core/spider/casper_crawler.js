@@ -108,6 +108,7 @@ casper.on('popup.created', function (popup) {
     popup.settings.userAgent = user_agent;
     popup.onResourceRequested = function (requestData, request) {
         requested_count++;
+        requestData['type'] = 'request';
         requested_urls.push(JSON.stringify(requestData));
         casper.echo('popup onResourceRequested: ' + requestData.url, 'INFO');
         //abort current request, important!
