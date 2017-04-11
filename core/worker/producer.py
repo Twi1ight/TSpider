@@ -30,7 +30,7 @@ class Producer(object):
         self.mongo_handle = None
         self.redis_handle = RedisUtils(db=kwargs.pop('redis_db'), tld=kwargs.pop('tld'))
 
-    def produce(self):
+    def produce(self, tspider_context):
         # mongodb with multipleprocessing must be init after fork
         self.mongo_handle = MongoUtils(db=self.__mongo_db)
         if not self.redis_handle.connected or not self.mongo_handle.connected:
@@ -40,7 +40,8 @@ class Producer(object):
         while True:
             try:
                 _, req = self.redis_handle.fetch_one_result()
-                logger.debug('got req, %d results left' % self.redis_handle.result_counts)
+                remainder_result = self.redis_handle.result_counts
+                logger.debug('got req, %d results left' % remainder_result)
                 self.proc_req(req)
             except:
                 logger.exception('produce exception!')
@@ -51,6 +52,12 @@ class Producer(object):
                     logger.error('mongodb disconnected! reconnecting...')
                     self.mongo_handle.connect()
                 time.sleep(10)
+            finally:
+                if remainder_result == 0 and self.redis_handle.task_counts == 0:
+                    with tspider_context['lock']:
+                        live_spider_counts = tspider_context['live_spider_counts'].value
+                    if live_spider_counts == 0:
+                        tspider_context['task_done'].set()
 
     def proc_req(self, req):
         try:

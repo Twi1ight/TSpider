@@ -7,16 +7,17 @@ TSpider is a web spider based on CasperJS and PhantomJS
 Copyright (c) 2016-2017 twi1ight@t00ls.net (http://twi1ight.com/)
 See the file 'doc/COPYING' for copying permission
 """
+import os
 import sys
 import argparse
-from multiprocessing import Process
+from multiprocessing import Process, Value, Lock, Event
 
 from core.utils.log import logger
 from core.utils.redis_utils import RedisUtils
 from core.utils.url import URL
 from core.worker.consumer import Consumer
 from core.worker.producer import Producer
-from settings import VERSION, RedisConf, MongoConf
+from settings import VERSION, RedisConf, MongoConf, TMPDIR_PATH
 
 
 def cmdparse():
@@ -52,25 +53,29 @@ def cmdparse():
 
 if __name__ == '__main__':
     args = cmdparse()
-    producer_pool = []
-    consumer_pool = []
     redis_handle = RedisUtils(db=args.redis_db)
     if args.keepon:
         redis_handle.restore_startup_params(args)
         logger.info(args)
 
+    for f in os.listdir(TMPDIR_PATH):
+        os.remove(os.path.join(TMPDIR_PATH, f))
+    tspider_context = {}
+    tspider_context['live_spider_counts'] = Value('i', 0)
+    tspider_context['task_done'] = Event()
+    tspider_context['lock'] = Lock()
     kwargs = {'tld': args.tld, 'cookie_file': args.cookie_file,
               'redis_db': args.redis_db, 'mongo_db': args.mongo_db}
     for _ in range(args.consumer):
         worker = Consumer(**kwargs).consume
-        proc = Process(name='consumer-%d' % _, target=worker)
+        proc = Process(name='consumer-%d' % _, target=worker, args=(tspider_context,))
+        proc.daemon = True
         proc.start()
-        consumer_pool.append(proc)
     for _ in range(args.producer):
         worker = Producer(**kwargs).produce
-        proc = Process(name='producer-%d' % _, target=worker)
+        proc = Process(name='producer-%d' % _, target=worker, args=(tspider_context,))
+        proc.daemon = True
         proc.start()
-        producer_pool.append(proc)
 
     if not args.keepon:
         redis_handle.flushdb()
@@ -88,5 +93,4 @@ if __name__ == '__main__':
             producer.create_task_from_file(target)
 
     redis_handle.close()
-    map(lambda x: x.join(), consumer_pool)
-    map(lambda x: x.join(), producer_pool)
+    tspider_context['task_done'].wait()

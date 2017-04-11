@@ -21,16 +21,17 @@ class Consumer(object):
         self.__cookie_file = kwargs.pop('cookie_file')
         self.redis_handle = RedisUtils(db=kwargs.pop('redis_db'), tld=kwargs.pop('tld'))
 
-    def consume(self):
+    def consume(self, tspider_context):
         if not self.redis_handle.connected:
             logger.error('no redis connection found in consumer! exit.')
             return
-
         while True:
             try:
                 url = self.redis_handle.fetch_one_task()
                 logger.info('get task url: %s' % url)
                 logger.info('%d tasks left' % self.redis_handle.task_counts)
+                with tspider_context['lock']:
+                    tspider_context['live_spider_counts'].value += 1
                 self.start_spider(url, self.__cookie_file)
             except:
                 logger.exception('consumer exception!')
@@ -38,6 +39,9 @@ class Consumer(object):
                     logger.error('redis disconnected! reconnecting...')
                     self.redis_handle.connect()
                 time.sleep(10)
+            finally:
+                with tspider_context['lock']:
+                    tspider_context['live_spider_counts'].value -= 1
 
     def start_spider(self, url, cookie_file=None):
         results = SpiderPage(url, cookie_file=cookie_file).spider()
