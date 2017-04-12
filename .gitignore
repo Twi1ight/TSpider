@@ -116,6 +116,7 @@ crashlytics.properties
 crashlytics-build.properties
 fabric.properties
 *.txt
+!requirements.txt
 *.rdb
 .tmp
 .DS_Store

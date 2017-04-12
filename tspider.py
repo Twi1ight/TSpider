@@ -57,13 +57,13 @@ if __name__ == '__main__':
     if args.keepon:
         redis_handle.restore_startup_params(args)
         logger.info(args)
-
-    for f in os.listdir(TMPDIR_PATH):
-        os.remove(os.path.join(TMPDIR_PATH, f))
-    tspider_context = {}
-    tspider_context['live_spider_counts'] = Value('i', 0)
-    tspider_context['task_done'] = Event()
-    tspider_context['lock'] = Lock()
+    if os.path.exists(TMPDIR_PATH):
+        for f in os.listdir(TMPDIR_PATH):
+            os.remove(os.path.join(TMPDIR_PATH, f))
+    tspider_context = {
+        'live_spider_counts': Value('i', 0),
+        'task_done': Event(),
+        'lock': Lock()}
     kwargs = {'tld': args.tld, 'cookie_file': args.cookie_file,
               'redis_db': args.redis_db, 'mongo_db': args.mongo_db}
     for _ in range(args.consumer):
