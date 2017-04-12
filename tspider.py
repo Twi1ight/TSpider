@@ -57,9 +57,9 @@ if __name__ == '__main__':
     if args.keepon:
         redis_handle.restore_startup_params(args)
         logger.info(args)
-
-    for f in os.listdir(TMPDIR_PATH):
-        os.remove(os.path.join(TMPDIR_PATH, f))
+    if os.path.exists(TMPDIR_PATH):
+        for f in os.listdir(TMPDIR_PATH):
+            os.remove(os.path.join(TMPDIR_PATH, f))
     tspider_context = {}
     tspider_context['live_spider_counts'] = Value('i', 0)
     tspider_context['task_done'] = Event()
