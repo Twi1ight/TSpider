@@ -26,11 +26,12 @@ class Producer(object):
         :return: :class:Producer object
         :rtype: Producer
         """
+        self.context = kwargs.pop('context')
         self.__mongo_db = kwargs.pop('mongo_db')
         self.mongo_handle = None
         self.redis_handle = RedisUtils(db=kwargs.pop('redis_db'), tld=kwargs.pop('tld'))
 
-    def produce(self, tspider_context):
+    def produce(self):
         # mongodb with multipleprocessing must be init after fork
         self.mongo_handle = MongoUtils(db=self.__mongo_db)
         if not self.redis_handle.connected or not self.mongo_handle.connected:
@@ -40,8 +41,9 @@ class Producer(object):
         while True:
             try:
                 _, req = self.redis_handle.fetch_one_result()
-                remainder_result = self.redis_handle.result_counts
-                logger.debug('got req, %d results left' % remainder_result)
+                with self.context['lock']:
+                    self.context['result_counts'].value -= 1
+                logger.debug('got req, %d results left' % self.context['result_counts'].value)
                 self.proc_req(req)
             except:
                 logger.exception('produce exception!')
@@ -53,11 +55,10 @@ class Producer(object):
                     self.mongo_handle.connect()
                 time.sleep(10)
             finally:
-                if remainder_result == 0 and self.redis_handle.task_counts == 0:
-                    with tspider_context['lock']:
-                        live_spider_counts = tspider_context['live_spider_counts'].value
-                    if live_spider_counts == 0:
-                        tspider_context['task_done'].set()
+                with self.context['lock']:
+                    if self.context['result_counts'].value == 0:
+                        if self.context['live_spider_counts'].value == 0 and self.context['task_counts'].value == 0:
+                            self.context['task_done'].set()
 
     def proc_req(self, req):
         try:
@@ -99,16 +100,18 @@ class Producer(object):
         elif method == 'GET':
             # new host found, add index page to task queue
             if self.redis_handle.get_hostname_reqcount(url.hostname) == 0:
-                self.redis_handle.create_task_from_url(URL(url.index_page), add_whitelist=False)
+                self.create_task_from_url(URL(url.index_page), add_whitelist=False)
             # check url validation inside create_url_task
-            self.redis_handle.create_task_from_url(url, add_whitelist=False)
+            self.create_task_from_url(url, add_whitelist=False)
         else:
             # not GET nor POST
             logger.error('HTTP Verb %s found!' % method)
             logger.debug(data)
 
-    def create_task_from_url(self, url):
-        self.redis_handle.create_task_from_url(url)
+    def create_task_from_url(self, url, **kwargs):
+        with self.context['lock']:
+            if self.redis_handle.create_task_from_url(url, **kwargs):
+                self.context['task_counts'].value += 1
 
     def create_task_from_file(self, fileobj):
         """
@@ -121,7 +124,7 @@ class Producer(object):
                 line = line.strip()
                 if not line: continue
                 url = URL(line)
-                self.redis_handle.create_task_from_url(url)
+                self.create_task_from_url(url)
 
 
 if __name__ == '__main__':

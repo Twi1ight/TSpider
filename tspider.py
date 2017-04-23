@@ -62,18 +62,20 @@ if __name__ == '__main__':
             os.remove(os.path.join(TMPDIR_PATH, f))
     tspider_context = {
         'live_spider_counts': Value('i', 0),
+        'task_counts': Value('i', 0),
+        'result_counts': Value('i', 0),
         'task_done': Event(),
         'lock': Lock()}
-    kwargs = {'tld': args.tld, 'cookie_file': args.cookie_file,
+    kwargs = {'tld': args.tld, 'cookie_file': args.cookie_file, 'context': tspider_context,
               'redis_db': args.redis_db, 'mongo_db': args.mongo_db}
     for _ in range(args.consumer):
         worker = Consumer(**kwargs).consume
-        proc = Process(name='consumer-%d' % _, target=worker, args=(tspider_context,))
+        proc = Process(name='consumer-%d' % _, target=worker)
         proc.daemon = True
         proc.start()
     for _ in range(args.producer):
         worker = Producer(**kwargs).produce
-        proc = Process(name='producer-%d' % _, target=worker, args=(tspider_context,))
+        proc = Process(name='producer-%d' % _, target=worker)
         proc.daemon = True
         proc.start()
 

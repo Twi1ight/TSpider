@@ -153,7 +153,7 @@ class RedisUtils(object):
         :param add_whitelist: for init scan task, disabled in task result produce
         :return:
         """
-        if valid_url_check and not self.valid_task_url(url): return
+        if valid_url_check and not self.valid_task_url(url): return False
 
         logger.info('add task: %s' % url.urlstring)
         self.redis_client.lpush(self.l_url_tasks, url.urlstring)
@@ -163,6 +163,7 @@ class RedisUtils(object):
         self.set_url_scanned(url)
         # incr req count
         self.incr_hostname_reqcount(url.hostname)
+        return True
 
     def valid_task_url(self, url):
         """
